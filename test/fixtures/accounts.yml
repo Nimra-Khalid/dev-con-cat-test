@@ -1,0 +1,27 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  external_id: MyString
+  company_name: MyString
+  plan: MyString
+  monthly_credit_allowance: 1
+  credits_used_this_cycle: 1
+  cycle_start: 2026-09-04
+  cycle_end: 2026-09-04
+  status: MyString
+  enabled_modules: 
+  avg_daily_burn: 1
+  billing_contact: MyString
+
+two:
+  external_id: MyString
+  company_name: MyString
+  plan: MyString
+  monthly_credit_allowance: 1
+  credits_used_this_cycle: 1
+  cycle_start: 2026-09-04
+  cycle_end: 2026-09-04
+  status: MyString
+  enabled_modules: 
+  avg_daily_burn: 1
+  billing_contact: MyString
