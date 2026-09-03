@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_215904) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_223740) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,6 +29,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_215904) do
     t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
     t.index ["external_id"], name: "index_accounts_on_external_id", unique: true
+  end
+
+  create_table "leads", force: :cascade do |t|
+    t.string "campaign"
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.string "external_id", null: false
+    t.string "first_name"
+    t.integer "form_dwell_ms"
+    t.text "landing_page_url", null: false
+    t.string "last_name"
+    t.string "phone"
+    t.bigint "pixel_session_id", null: false
+    t.string "submit_ip"
+    t.datetime "submitted_at", null: false
+    t.text "trusted_form_cert_url"
+    t.datetime "updated_at", null: false
+    t.text "user_agent"
+    t.index ["external_id"], name: "index_leads_on_external_id", unique: true
+    t.index ["pixel_session_id"], name: "index_leads_on_pixel_session_id", unique: true
+  end
+
+  create_table "pixel_sessions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "page_url", null: false
+    t.bigint "pixel_id", null: false
+    t.text "referrer"
+    t.string "session_id", null: false
+    t.datetime "started_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "user_agent"
+    t.string "visit_ip"
+    t.index ["pixel_id"], name: "index_pixel_sessions_on_pixel_id"
+    t.index ["session_id"], name: "index_pixel_sessions_on_session_id", unique: true
   end
 
   create_table "pixels", force: :cascade do |t|
@@ -57,6 +91,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_215904) do
     t.index ["external_id"], name: "index_users_on_external_id", unique: true
   end
 
+  add_foreign_key "leads", "pixel_sessions"
+  add_foreign_key "pixel_sessions", "pixels"
   add_foreign_key "pixels", "accounts"
   add_foreign_key "users", "accounts"
 end

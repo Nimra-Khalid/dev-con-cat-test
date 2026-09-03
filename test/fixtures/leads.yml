@@ -1,0 +1,31 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  external_id: MyString
+  pixel_session: one
+  first_name: MyString
+  last_name: MyString
+  email: MyString
+  phone: MyString
+  campaign: MyString
+  landing_page_url: MyText
+  submit_ip: MyString
+  user_agent: MyText
+  trusted_form_cert_url: MyText
+  form_dwell_ms: 1
+  submitted_at: 2026-09-04 03:37:40
+
+two:
+  external_id: MyString
+  pixel_session: two
+  first_name: MyString
+  last_name: MyString
+  email: MyString
+  phone: MyString
+  campaign: MyString
+  landing_page_url: MyText
+  submit_ip: MyString
+  user_agent: MyText
+  trusted_form_cert_url: MyText
+  form_dwell_ms: 1
+  submitted_at: 2026-09-04 03:37:40

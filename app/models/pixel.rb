@@ -1,5 +1,9 @@
 class Pixel < ApplicationRecord
+  
   belongs_to :account
+
+  has_many :pixel_sessions, 
+            dependent: :restrict_with_error
 
   validates :public_id,
             presence: true,
