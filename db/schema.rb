@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_211515) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_215904) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -31,6 +31,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_211515) do
     t.index ["external_id"], name: "index_accounts_on_external_id", unique: true
   end
 
+  create_table "pixels", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "active", default: true, null: false
+    t.jsonb "allowed_pages", default: [], null: false
+    t.datetime "created_at", null: false
+    t.jsonb "enabled_modules", default: [], null: false
+    t.string "name", null: false
+    t.string "public_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_pixels_on_account_id"
+    t.index ["public_id"], name: "index_pixels_on_public_id", unique: true
+  end
+
   create_table "users", force: :cascade do |t|
     t.bigint "account_id"
     t.datetime "created_at", null: false
@@ -44,5 +57,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_211515) do
     t.index ["external_id"], name: "index_users_on_external_id", unique: true
   end
 
+  add_foreign_key "pixels", "accounts"
   add_foreign_key "users", "accounts"
 end

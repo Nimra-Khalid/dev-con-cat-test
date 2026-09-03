@@ -1,6 +1,7 @@
 class Account < ApplicationRecord
 
   has_many :users, dependent: :restrict_with_error
+  has_many :pixels, dependent: :restrict_with_error
 
   validates :external_id,
             presence: true,
