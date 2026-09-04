@@ -11,6 +11,10 @@ class VerificationRun < ApplicationRecord
   has_many :layer_results,
            dependent: :destroy
 
+           
+  has_one :verdict,
+            dependent: :destroy
+
   validates :status,
             inclusion: { in: STATUSES }
 
