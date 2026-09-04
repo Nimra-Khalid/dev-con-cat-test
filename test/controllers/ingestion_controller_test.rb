@@ -120,4 +120,114 @@ class IngestionControllerTest < ActionDispatch::IntegrationTest
       lead.verification_runs.count
     )
   end
+
+  test "activity endpoint returns verification events" do
+  session =
+    @pixel.pixel_sessions.create!(
+      session_id: "session_activity_test",
+      page_url: "https://example.com/landing",
+      started_at: Time.current
+    )
+
+  lead =
+    session.create_lead!(
+      external_id: "L-1001",
+      first_name: "Jane",
+      last_name: "Doe",
+      email: "jane@example.com",
+      phone: "5551234567",
+      landing_page_url: session.page_url,
+      submitted_at: Time.current
+    )
+
+  VerificationRunner.new(lead).call
+
+  get "/leads/#{lead.external_id}/activity",
+      as: :json
+
+  assert_response :success
+
+  body = JSON.parse(response.body)
+
+  assert_equal lead.external_id, body["lead_id"]
+
+  event_types =
+    body["events"].map do |event|
+      event["event_type"]
+    end
+
+  assert_includes(
+    event_types,
+    "verification_started"
+  )
+
+  assert_includes(
+    event_types,
+    "layer_result"
+  )
+
+  assert_includes(
+    event_types,
+    "final_verdict"
+  )
+  end
+
+  test "activity endpoint supports after_id polling" do
+  session =
+    @pixel.pixel_sessions.create!(
+      session_id: "session_polling_test",
+      page_url: "https://example.com/landing",
+      started_at: Time.current
+    )
+
+  lead =
+    session.create_lead!(
+      external_id: "L-1002",
+      first_name: "John",
+      last_name: "Doe",
+      email: "john@example.com",
+      phone: "5552223333",
+      landing_page_url: session.page_url,
+      submitted_at: Time.current
+    )
+
+  first_event =
+    lead.activity_events.create!(
+      event_type: "info",
+      payload: {
+        message: "First event"
+      }
+    )
+
+  second_event =
+    lead.activity_events.create!(
+      event_type: "info",
+      payload: {
+        message: "Second event"
+      }
+    )
+
+  get "/leads/#{lead.external_id}/activity",
+      params: {
+        after_id: first_event.id
+      },
+      as: :json
+
+  assert_response :success
+
+  body = JSON.parse(response.body)
+
+  assert_equal 1, body["events"].length
+
+  assert_equal(
+    second_event.id,
+    body["events"].first["id"]
+  )
+
+  assert_equal(
+    "Second event",
+    body["events"].first
+      .dig("payload", "message")
+  )
+  end
 end

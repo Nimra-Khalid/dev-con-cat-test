@@ -142,6 +142,43 @@ class IngestionController < ApplicationController
     }, status: :unprocessable_entity
   end
 
+  def activity
+  lead = Lead.find_by(
+    external_id: params[:lead_id]
+  )
+
+  unless lead
+    return render json: {
+      error: "Lead not found"
+    }, status: :not_found
+  end
+
+  events =
+    lead
+      .activity_events
+      .order(:id)
+
+  if params[:after_id].present?
+    events =
+      events.where(
+        "id > ?",
+        params[:after_id].to_i
+      )
+  end
+
+  render json: {
+    lead_id: lead.external_id,
+    events: events.map do |event|
+      {
+        id: event.id,
+        event_type: event.event_type,
+        payload: event.payload,
+        created_at: event.created_at
+      }
+    end
+  }
+end
+
   private
 
   def field_value(field_name)

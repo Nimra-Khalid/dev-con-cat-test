@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_185542) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_192650) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,6 +29,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_185542) do
     t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
     t.index ["external_id"], name: "index_accounts_on_external_id", unique: true
+  end
+
+  create_table "activity_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.bigint "lead_id", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["lead_id", "id"], name: "index_activity_events_on_lead_id_and_id"
+    t.index ["lead_id"], name: "index_activity_events_on_lead_id"
   end
 
   create_table "credit_transactions", force: :cascade do |t|
@@ -144,6 +154,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_185542) do
     t.index ["lead_id"], name: "index_verification_runs_on_lead_id"
   end
 
+  add_foreign_key "activity_events", "leads"
   add_foreign_key "credit_transactions", "accounts"
   add_foreign_key "credit_transactions", "verification_runs"
   add_foreign_key "layer_results", "verification_runs"

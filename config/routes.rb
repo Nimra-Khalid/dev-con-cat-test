@@ -15,5 +15,8 @@ Rails.application.routes.draw do
   Rails.application.routes.draw do
     post "/visit", to: "ingestion#visit"
     post "/leads", to: "ingestion#create_lead"
-  end
+
+    get "/leads/:lead_id/activity",
+        to: "ingestion#activity"
+    end
 end

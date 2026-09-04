@@ -26,6 +26,14 @@ class VerificationRunner
       started_at: Time.current
     )
 
+    create_activity_event(
+      "verification_started",
+      {
+        verification_run_id: verification_run.id,
+        policy_version: POLICY_VERSION
+      }
+    )
+
     process_modules(verification_run)
 
     consensus = ConsensusEngine.new(verification_run).call
@@ -42,6 +50,17 @@ class VerificationRunner
     verification_run.update!(
       status: "completed",
       completed_at: Time.current
+    )
+
+    create_activity_event(
+      "final_verdict",
+      {
+        verification_run_id: verification_run.id,
+        decision: verdict.decision,
+        risk_score: verdict.risk_score,
+        hard_stop: verdict.hard_stop,
+        reasons: verdict.reasons
+      }
     )
 
     verdict
@@ -135,18 +154,21 @@ class VerificationRunner
         "completed"
       end
 
-    verification_run.layer_results.create!(
-      layer_name: layer_name,
-      execution_status: execution_status,
-      verdict: normalized["verdict"],
-      risk_score: 0,
-      credit_cost:
-        CreditManager::MODULE_COSTS.fetch(
-          layer_name,
-          0
-        ),
-      raw_response: normalized
-    )
+    result =
+      verification_run.layer_results.create!(
+        layer_name: layer_name,
+        execution_status: execution_status,
+        verdict: normalized["verdict"],
+        risk_score: 0,
+        credit_cost:
+          CreditManager::MODULE_COSTS.fetch(
+            layer_name,
+            0
+          ),
+        raw_response: normalized
+      )
+
+    create_layer_activity(result)
   rescue StandardError => e
     create_failed_result(
       verification_run,
@@ -168,20 +190,23 @@ class VerificationRunner
         "pass"
       end
 
-    verification_run.layer_results.create!(
-      layer_name: "duplicate_detection",
-      execution_status: "completed",
-      verdict: verdict,
-      risk_score: 0,
-      credit_cost:
-        CreditManager::MODULE_COSTS.fetch(
-          "duplicate_detection",
-          0
-        ),
-      raw_response: {
-        "status" => duplicate_status
-      }
-    )
+    result =
+      verification_run.layer_results.create!(
+        layer_name: "duplicate_detection",
+        execution_status: "completed",
+        verdict: verdict,
+        risk_score: 0,
+        credit_cost:
+          CreditManager::MODULE_COSTS.fetch(
+            "duplicate_detection",
+            0
+          ),
+        raw_response: {
+          "status" => duplicate_status
+        }
+      )
+
+    create_layer_activity(result)
   end
 
   def duplicate_status_for_lead
@@ -239,15 +264,18 @@ class VerificationRunner
     layer_name,
     reason
   )
-    verification_run.layer_results.create!(
-      layer_name: layer_name,
-      execution_status: "failed",
-      verdict: nil,
-      risk_score: 0,
-      credit_cost: 0,
-      reason: reason,
-      raw_response: {}
-    )
+    result =
+      verification_run.layer_results.create!(
+        layer_name: layer_name,
+        execution_status: "failed",
+        verdict: nil,
+        risk_score: 0,
+        credit_cost: 0,
+        reason: reason,
+        raw_response: {}
+      )
+
+    create_layer_activity(result)
   end
 
   def create_insufficient_credit_result(
@@ -255,16 +283,41 @@ class VerificationRunner
     layer_name,
     required_credits
   )
-    verification_run.layer_results.create!(
-      layer_name: layer_name,
-      execution_status: "insufficient_credits",
-      verdict: nil,
-      risk_score: 0,
-      credit_cost: 0,
-      reason:
-        "Verification requires #{required_credits} credits, " \
-        "but the account does not have enough remaining.",
-      raw_response: {}
+    result =
+      verification_run.layer_results.create!(
+        layer_name: layer_name,
+        execution_status: "insufficient_credits",
+        verdict: nil,
+        risk_score: 0,
+        credit_cost: 0,
+        reason:
+          "Verification requires #{required_credits} credits, " \
+          "but the account does not have enough remaining.",
+        raw_response: {}
+      )
+
+    create_layer_activity(result)
+  end
+
+  def create_layer_activity(result)
+    create_activity_event(
+      "layer_result",
+      {
+        layer_name: result.layer_name,
+        execution_status: result.execution_status,
+        verdict: result.verdict,
+        risk_score: result.risk_score,
+        credit_cost: result.credit_cost,
+        reason: result.reason,
+        raw_response: result.raw_response
+      }
+    )
+  end
+
+  def create_activity_event(event_type, payload)
+    lead.activity_events.create!(
+      event_type: event_type,
+      payload: payload
     )
   end
 
@@ -278,4 +331,3 @@ class VerificationRunner
     }
   end
 end
-

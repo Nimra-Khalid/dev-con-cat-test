@@ -3,6 +3,9 @@ class Lead < ApplicationRecord
 
   has_many :verification_runs,
          dependent: :destroy
+  
+  has_many :activity_events,
+         dependent: :destroy
          
   validates :external_id,
             presence: true,
