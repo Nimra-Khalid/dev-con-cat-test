@@ -11,4 +11,9 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+
+  Rails.application.routes.draw do
+    post "/visit", to: "ingestion#visit"
+    post "/leads", to: "ingestion#create_lead"
+  end
 end
