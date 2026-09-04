@@ -140,7 +140,7 @@ class ConsensusEngine
 
     fraud_score = raw["fraud_score"].to_f
 
-    if fraud_score >= 0.8
+    if fraud_score >= 80
       add_risk(20, "High email fraud score")
     end
   end
