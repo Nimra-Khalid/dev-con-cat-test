@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_223740) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_161230) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,6 +29,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_223740) do
     t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
     t.index ["external_id"], name: "index_accounts_on_external_id", unique: true
+  end
+
+  create_table "layer_results", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "credit_cost", default: 0, null: false
+    t.string "execution_status", default: "pending", null: false
+    t.string "layer_name", null: false
+    t.jsonb "raw_response", default: {}, null: false
+    t.text "reason"
+    t.integer "risk_score", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.string "verdict"
+    t.bigint "verification_run_id", null: false
+    t.index ["verification_run_id", "layer_name"], name: "index_layer_results_on_verification_run_id_and_layer_name", unique: true
+    t.index ["verification_run_id"], name: "index_layer_results_on_verification_run_id"
   end
 
   create_table "leads", force: :cascade do |t|
@@ -91,8 +106,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_223740) do
     t.index ["external_id"], name: "index_users_on_external_id", unique: true
   end
 
+  create_table "verification_runs", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.bigint "lead_id", null: false
+    t.string "policy_version", null: false
+    t.datetime "started_at"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["lead_id", "created_at"], name: "index_verification_runs_on_lead_id_and_created_at"
+    t.index ["lead_id"], name: "index_verification_runs_on_lead_id"
+  end
+
+  add_foreign_key "layer_results", "verification_runs"
   add_foreign_key "leads", "pixel_sessions"
   add_foreign_key "pixel_sessions", "pixels"
   add_foreign_key "pixels", "accounts"
   add_foreign_key "users", "accounts"
+  add_foreign_key "verification_runs", "leads"
 end

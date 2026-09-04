@@ -1,6 +1,9 @@
 class Lead < ApplicationRecord
   belongs_to :pixel_session
 
+  has_many :verification_runs,
+         dependent: :destroy
+         
   validates :external_id,
             presence: true,
             uniqueness: true

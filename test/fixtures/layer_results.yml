@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  verification_run: one
+  layer_name: MyString
+  execution_status: MyString
+  verdict: MyString
+  risk_score: 1
+  reason: MyText
+  raw_response: 
+  credit_cost: 1
+
+two:
+  verification_run: two
+  layer_name: MyString
+  execution_status: MyString
+  verdict: MyString
+  risk_score: 1
+  reason: MyText
+  raw_response: 
+  credit_cost: 1
