@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_181622) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_185542) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,6 +29,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_181622) do
     t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
     t.index ["external_id"], name: "index_accounts_on_external_id", unique: true
+  end
+
+  create_table "credit_transactions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "amount", null: false
+    t.datetime "created_at", null: false
+    t.string "layer_name", null: false
+    t.string "transaction_type", default: "verification", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "verification_run_id", null: false
+    t.index ["account_id"], name: "index_credit_transactions_on_account_id"
+    t.index ["verification_run_id", "layer_name"], name: "idx_on_verification_run_id_layer_name_e2039dbf06", unique: true
+    t.index ["verification_run_id"], name: "index_credit_transactions_on_verification_run_id"
   end
 
   create_table "layer_results", force: :cascade do |t|
@@ -131,6 +144,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_181622) do
     t.index ["lead_id"], name: "index_verification_runs_on_lead_id"
   end
 
+  add_foreign_key "credit_transactions", "accounts"
+  add_foreign_key "credit_transactions", "verification_runs"
   add_foreign_key "layer_results", "verification_runs"
   add_foreign_key "leads", "pixel_sessions"
   add_foreign_key "pixel_sessions", "pixels"

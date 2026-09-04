@@ -22,6 +22,7 @@ class ConsensusEngine
     @score = 0
     @reasons = []
     @hard_stop = false
+    @requires_review = false
   end
 
   def call
@@ -40,13 +41,28 @@ class ConsensusEngine
   attr_reader :verification_run
 
   def process_layer_results
-    verification_run.layer_results.each do |result|
-      next unless result.execution_status == "completed"
+  verification_run.layer_results.each do |result|
+    process_incomplete_result(result)
 
-      process_hard_stop(result)
-      process_weighted_signal(result)
-    end
+    next unless result.execution_status == "completed"
+
+    process_hard_stop(result)
+    process_weighted_signal(result)
   end
+end
+
+def process_incomplete_result(result)
+  case result.execution_status
+  when "failed"
+    @requires_review = true
+
+    @reasons << "#{result.layer_name} verification failed or was unavailable"
+  when "insufficient_credits"
+    @requires_review = true
+
+    @reasons << "#{result.layer_name} was not run because the account had insufficient credits"
+  end
+end
 
   def process_hard_stop(result)
     config = HARD_STOP_LAYERS[result.layer_name]
@@ -184,6 +200,8 @@ class ConsensusEngine
   def decision
     return "REJECT" if @hard_stop
     return "REJECT" if @score >= REJECT_THRESHOLD
+
+    return "REVIEW" if @requires_review
     return "REVIEW" if @score >= ACCEPT_THRESHOLD
 
     "ACCEPT"

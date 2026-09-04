@@ -15,6 +15,9 @@ class VerificationRun < ApplicationRecord
   has_one :verdict,
             dependent: :destroy
 
+  has_many :credit_transactions,
+         dependent: :destroy          
+
   validates :status,
             inclusion: { in: STATUSES }
 

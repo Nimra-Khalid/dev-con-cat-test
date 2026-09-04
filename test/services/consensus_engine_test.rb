@@ -190,28 +190,76 @@ class ConsensusEngineTest < ActiveSupport::TestCase
     assert_equal false, result[:hard_stop]
   end
 
-  test "does not score layers that did not complete" do
-    run = build_run([
-      {
-        layer_name: "anura",
-        execution_status: "failed",
-        raw_response: {
-          "verdict" => "bad"
-        }
-      },
-      {
-        layer_name: "vpn_proxy",
-        execution_status: "not_enabled",
-        raw_response: {
-          "risk" => "high"
-        }
+  test "not enabled layers do not affect consensus" do
+  run = build_run([
+    {
+      layer_name: "vpn_proxy",
+      execution_status: "not_enabled",
+      raw_response: {
+        "risk" => "high"
       }
-    ])
+    }
+  ])
 
-    result = ConsensusEngine.new(run).call
+  result = ConsensusEngine.new(run).call
 
-    assert_equal "ACCEPT", result[:decision]
-    assert_equal 0, result[:score]
-    assert_equal false, result[:hard_stop]
+  assert_equal "ACCEPT", result[:decision]
+  assert_equal 0, result[:score]
+  assert_equal false, result[:hard_stop]
+end
+
+test "not applicable layers do not affect consensus" do
+  run = build_run([
+    {
+      layer_name: "voice",
+      execution_status: "not_applicable",
+      raw_response: {
+        "status" => "synthetic"
+      }
+    }
+  ])
+
+  result = ConsensusEngine.new(run).call
+
+  assert_equal "ACCEPT", result[:decision]
+  assert_equal 0, result[:score]
+end
+
+test "failed verification forces review" do
+  run = build_run([
+    {
+      layer_name: "trustedform",
+      execution_status: "failed"
+    }
+  ])
+
+  result = ConsensusEngine.new(run).call
+
+  assert_equal "REVIEW", result[:decision]
+  assert_equal 0, result[:score]
+
+  assert_includes(
+    result[:reasons],
+    "trustedform verification failed or was unavailable"
+  )
+end
+
+test "insufficient credits force review" do
+  run = build_run([
+    {
+      layer_name: "blacklist_alliance",
+      execution_status: "insufficient_credits"
+    }
+  ])
+
+  result = ConsensusEngine.new(run).call
+
+  assert_equal "REVIEW", result[:decision]
+  assert_equal 0, result[:score]
+
+  assert_includes(
+    result[:reasons],
+    "blacklist_alliance was not run because the account had insufficient credits"
+  )
   end
 end
