@@ -138,4 +138,91 @@ class VerificationRunnerTest < ActiveSupport::TestCase
     account.credits_used_this_cycle
   )
   end
+
+  test "marks unaffordable layers insufficient while continuing affordable checks" do
+  account = Account.create!(
+    external_id: "acct_low_credit_test",
+    company_name: "Low Credit Test",
+    plan: "starter",
+    monthly_credit_allowance: 4,
+    credits_used_this_cycle: 0,
+    status: "active",
+    enabled_modules: [
+      "anura",
+      "phone_validation",
+      "dnc"
+    ]
+  )
+
+  pixel = account.pixels.create!(
+    public_id: "px_low_credit_test",
+    name: "Low Credit Pixel",
+    allowed_pages: [],
+    enabled_modules: [
+      "anura",
+      "phone_validation",
+      "dnc"
+    ],
+    active: true
+  )
+
+  session = pixel.pixel_sessions.create!(
+    session_id: "session_low_credit_test",
+    page_url: "https://example.com",
+    started_at: Time.current
+  )
+
+  lead = session.create_lead!(
+    external_id: "low-credit-lead",
+    fixture_key: "L-1001",
+    first_name: "Low",
+    last_name: "Credit",
+    email: "lowcredit@example.com",
+    phone: "5551114444",
+    landing_page_url: "https://example.com",
+    submitted_at: Time.current
+  )
+
+  verdict = VerificationRunner.new(lead).call
+
+  run = lead.verification_runs.last
+
+  anura =
+    run.layer_results.find_by!(
+      layer_name: "anura"
+    )
+
+  phone =
+    run.layer_results.find_by!(
+      layer_name: "phone_validation"
+    )
+
+  dnc =
+    run.layer_results.find_by!(
+      layer_name: "dnc"
+    )
+
+  assert_equal "completed",
+               anura.execution_status
+
+  assert_equal "insufficient_credits",
+               phone.execution_status
+
+  assert_equal "completed",
+               dnc.execution_status
+
+  assert_equal 3,
+               run.layer_results.count
+
+  assert_equal 2,
+               run.credit_transactions.count
+
+  account.reload
+
+  assert_equal 3,
+               account.credits_used_this_cycle
+
+  assert_equal "REVIEW",
+               verdict.decision
+ end
 end
