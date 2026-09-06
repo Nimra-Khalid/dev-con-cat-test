@@ -52,6 +52,8 @@ class VerificationRunner
       completed_at: Time.current
     )
 
+    CertificateIssuer.new(verification_run).call
+
     create_activity_event(
       "final_verdict",
       {
@@ -128,7 +130,7 @@ class VerificationRunner
 
     raw = provider_response(
       filename,
-      lead.external_id
+      lead.fixture_key.presence || lead.external_id
     )
 
     unless raw

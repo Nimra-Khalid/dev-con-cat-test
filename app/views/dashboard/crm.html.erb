@@ -1,0 +1,374 @@
+<div class="crm-shell">
+  <aside class="crm-sidebar">
+    <div class="crm-brand">
+      <div class="brand-mark">SP</div>
+
+      <div>
+        <strong>Super Pixel</strong>
+        <span>Verification CRM</span>
+      </div>
+    </div>
+
+    <nav class="crm-nav">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/crm" class="active">Leads</a>
+      <a href="/pixels-page">Pixels</a>
+    </nav>
+
+    <div class="crm-user">
+      <strong><%= @current_user.name %></strong>
+      <span><%= @current_user.role.humanize %></span>
+      <span><%= @current_user.email %></span>
+    </div>
+  </aside>
+
+  <main class="crm-main">
+    <header class="crm-header">
+      <div>
+        <h1>Lead Verification CRM</h1>
+        <p>
+          Search, review and inspect verification decisions.
+        </p>
+      </div>
+
+      <button id="logout-button" class="secondary-button">
+        Sign out
+      </button>
+    </header>
+
+    <section class="crm-toolbar">
+      <input
+        id="lead-search"
+        type="text"
+        placeholder="Search name, email, phone, lead ID..."
+      >
+
+      <select id="verdict-filter">
+        <option value="">All verdicts</option>
+        <option value="ACCEPT">Accept</option>
+        <option value="REVIEW">Review</option>
+        <option value="REJECT">Reject</option>
+      </select>
+    </section>
+
+    <section class="crm-panel">
+      <div class="crm-panel-header">
+        <div>
+          <h2>Leads</h2>
+          <span id="lead-count">Loading...</span>
+        </div>
+      </div>
+
+      <div class="crm-table-wrap">
+        <table class="crm-table">
+          <thead>
+            <tr>
+              <th>Lead</th>
+              <th>Contact</th>
+              <th>Campaign</th>
+              <th>Verdict</th>
+              <th>Risk</th>
+              <th>Submitted</th>
+            </tr>
+          </thead>
+
+          <tbody id="leads-body">
+            <tr>
+              <td colspan="6" class="crm-empty">
+                Loading leads...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="crm-pagination">
+        <button id="prev-page" class="secondary-button">
+          Previous
+        </button>
+
+        <span id="page-info">Page 1</span>
+
+        <button id="next-page" class="secondary-button">
+          Next
+        </button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  let currentPage = 1;
+  let totalPages = 1;
+
+  const searchInput =
+    document.getElementById("lead-search");
+
+  const verdictFilter =
+    document.getElementById("verdict-filter");
+
+  const leadsBody =
+    document.getElementById("leads-body");
+
+  const leadCount =
+    document.getElementById("lead-count");
+
+  const pageInfo =
+    document.getElementById("page-info");
+
+  const prevButton =
+    document.getElementById("prev-page");
+
+  const nextButton =
+    document.getElementById("next-page");
+
+  let searchTimer;
+
+  function verdictClass(decision) {
+    if (decision === "ACCEPT") {
+      return "badge badge-success";
+    }
+
+    if (decision === "REVIEW") {
+      return "badge badge-warning";
+    }
+
+    if (decision === "REJECT") {
+      return "badge badge-danger";
+    }
+
+    return "badge badge-muted";
+  }
+
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = value ?? "";
+    return div.innerHTML;
+  }
+
+  function formatDate(value) {
+    if (!value) return "—";
+
+    return new Date(value).toLocaleString();
+  }
+
+  async function loadLeads() {
+    leadsBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="crm-empty">
+          Loading leads...
+        </td>
+      </tr>
+    `;
+
+    const params = new URLSearchParams({
+      page: currentPage,
+      per_page: 10
+    });
+
+    const search = searchInput.value.trim();
+
+    if (search) {
+      params.set("search", search);
+    }
+
+    if (verdictFilter.value) {
+      params.set(
+        "verdict",
+        verdictFilter.value
+      );
+    }
+
+    try {
+      const response = await fetch(
+        `/crm/leads?${params.toString()}`,
+        {
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json"
+          }
+        }
+      );
+
+      if (response.status === 401) {
+        window.location.href = "/login-page";
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          "Unable to load leads"
+        );
+      }
+
+      const data = await response.json();
+
+      renderLeads(data.results || []);
+
+      totalPages =
+        data.meta?.total_pages || 1;
+
+      leadCount.textContent =
+        `${data.meta?.total_count || 0} total leads`;
+
+      pageInfo.textContent =
+        `Page ${data.meta?.page || 1} of ${totalPages}`;
+
+      prevButton.disabled =
+        currentPage <= 1;
+
+      nextButton.disabled =
+        currentPage >= totalPages;
+    } catch (error) {
+      leadsBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="crm-empty crm-error">
+            ${escapeHtml(error.message)}
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  function renderLeads(leads) {
+    if (!leads.length) {
+      leadsBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="crm-empty">
+            No leads found.
+          </td>
+        </tr>
+      `;
+
+      return;
+    }
+
+    leadsBody.innerHTML =
+      leads.map((lead) => {
+        const person = lead.person || {};
+        const verdict = lead.verdict || {};
+
+        const fullName =
+          [person.first_name, person.last_name]
+            .filter(Boolean)
+            .join(" ") || "Unknown";
+
+        return `
+          <tr
+            class="crm-row"
+            onclick="window.location.href='/crm/lead/${encodeURIComponent(
+              lead.id
+            )}'"
+          >
+            <td>
+              <strong>
+                ${escapeHtml(fullName)}
+              </strong>
+
+              <span class="cell-secondary">
+                ${escapeHtml(lead.id)}
+              </span>
+            </td>
+
+            <td>
+              <span>
+                ${escapeHtml(person.email || "—")}
+              </span>
+
+              <span class="cell-secondary">
+                ${escapeHtml(person.phone || "—")}
+              </span>
+            </td>
+
+            <td>
+              ${escapeHtml(
+                lead.campaign || "—"
+              )}
+            </td>
+
+            <td>
+              <span class="${verdictClass(
+                verdict.decision
+              )}">
+                ${escapeHtml(
+                  verdict.decision || "PENDING"
+                )}
+              </span>
+            </td>
+
+            <td>
+              ${
+                verdict.risk_score ??
+                "—"
+              }
+            </td>
+
+            <td>
+              ${escapeHtml(
+                formatDate(
+                  lead.submitted_at
+                )
+              )}
+            </td>
+          </tr>
+        `;
+      }).join("");
+  }
+
+  searchInput.addEventListener(
+    "input",
+    function () {
+      clearTimeout(searchTimer);
+
+      searchTimer = setTimeout(() => {
+        currentPage = 1;
+        loadLeads();
+      }, 350);
+    }
+  );
+
+  verdictFilter.addEventListener(
+    "change",
+    function () {
+      currentPage = 1;
+      loadLeads();
+    }
+  );
+
+  prevButton.addEventListener(
+    "click",
+    function () {
+      if (currentPage > 1) {
+        currentPage -= 1;
+        loadLeads();
+      }
+    }
+  );
+
+  nextButton.addEventListener(
+    "click",
+    function () {
+      if (currentPage < totalPages) {
+        currentPage += 1;
+        loadLeads();
+      }
+    }
+  );
+
+  document
+    .getElementById("logout-button")
+    .addEventListener(
+      "click",
+      async function () {
+        await fetch("/logout", {
+          method: "DELETE",
+          credentials: "same-origin"
+        });
+
+        window.location.href =
+          "/login-page";
+      }
+    );
+
+  loadLeads();
+</script>

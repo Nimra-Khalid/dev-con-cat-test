@@ -1,0 +1,99 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="brand-mark">SP</div>
+
+    <h1>Super Pixel</h1>
+
+    <p class="subtitle">
+      Lead intelligence, consent and fraud verification.
+    </p>
+
+    <form id="login-form">
+      <div class="field">
+        <label for="email">Email</label>
+
+        <input
+          id="email"
+          name="email"
+          type="email"
+          value="admin@solarpro.test"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+
+        <input
+          id="password"
+          name="password"
+          type="password"
+          value="password123"
+          autocomplete="current-password"
+          required
+        >
+      </div>
+
+      <div id="login-error" class="error-message"></div>
+
+      <button id="login-button" type="submit">
+        Sign in
+      </button>
+    </form>
+
+    <div class="demo-box">
+      <strong>Demo account</strong>
+
+      <span>admin@solarpro.test</span>
+      <span>password123</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById("login-form");
+  const errorBox = document.getElementById("login-error");
+  const button = document.getElementById("login-button");
+
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    errorBox.textContent = "";
+    button.disabled = true;
+    button.textContent = "Signing in...";
+
+    try {
+      const response = await fetch("/login", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+
+        credentials: "same-origin",
+
+        body: JSON.stringify({
+          email: document.getElementById("email").value,
+          password: document.getElementById("password").value
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Unable to sign in"
+        );
+      }
+
+      window.location.href = "/crm";
+    } catch (error) {
+      errorBox.textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Sign in";
+    }
+  });
+</script>

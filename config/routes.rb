@@ -13,10 +13,34 @@ Rails.application.routes.draw do
   # root "posts#index"
 
   Rails.application.routes.draw do
+
+    # Authentication
+    post "/login", to: "sessions#create"
+    delete "/logout", to: "sessions#destroy"
+    get "/me", to: "sessions#show"  
+
     post "/visit", to: "ingestion#visit"
     post "/leads", to: "ingestion#create_lead"
 
     get "/leads/:lead_id/activity",
-        to: "ingestion#activity"
+    to: "ingestion#activity"
+
+    get "/crm/leads", to: "leads#index"
+    get "/crm/leads/:id", to: "leads#show"
+
+    get "/certificates/:public_id",
+    to: "certificates#show"
+
+    get "/login-page", to: "dashboard#login"
+    get "/dashboard", to: "dashboard#index"
+    get "/crm", to: "dashboard#crm"
+    get "/crm/lead/:id", to: "dashboard#lead", as: :crm_lead_page
+
+    get "/pixels", to: "pixels#index"
+    post "/pixels", to: "pixels#create"
+    get "/pixels/:id", to: "pixels#show"
+    patch "/pixels/:id", to: "pixels#update"
+
+    get "/pixels-page", to: "dashboard#pixels"
     end
 end

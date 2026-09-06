@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_192650) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_06_204144) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -39,6 +39,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_192650) do
     t.datetime "updated_at", null: false
     t.index ["lead_id", "id"], name: "index_activity_events_on_lead_id_and_id"
     t.index ["lead_id"], name: "index_activity_events_on_lead_id"
+  end
+
+  create_table "consent_certificates", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "evidence", default: {}, null: false
+    t.datetime "issued_at", null: false
+    t.string "public_id", null: false
+    t.string "signature", null: false
+    t.string "trusted_form_reference"
+    t.datetime "updated_at", null: false
+    t.bigint "verification_run_id", null: false
+    t.index ["public_id"], name: "index_consent_certificates_on_public_id", unique: true
+    t.index ["verification_run_id"], name: "index_consent_certificates_on_verification_run_id", unique: true
   end
 
   create_table "credit_transactions", force: :cascade do |t|
@@ -75,6 +88,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_192650) do
     t.string "email"
     t.string "external_id", null: false
     t.string "first_name"
+    t.string "fixture_key"
     t.integer "form_dwell_ms"
     t.text "landing_page_url", null: false
     t.string "last_name"
@@ -86,6 +100,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_192650) do
     t.datetime "updated_at", null: false
     t.text "user_agent"
     t.index ["external_id"], name: "index_leads_on_external_id", unique: true
+    t.index ["fixture_key"], name: "index_leads_on_fixture_key"
     t.index ["pixel_session_id"], name: "index_leads_on_pixel_session_id", unique: true
   end
 
@@ -122,6 +137,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_192650) do
     t.string "email", null: false
     t.string "external_id", null: false
     t.string "name", null: false
+    t.string "password_digest"
     t.string "role", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_users_on_account_id"
@@ -155,6 +171,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_192650) do
   end
 
   add_foreign_key "activity_events", "leads"
+  add_foreign_key "consent_certificates", "verification_runs"
   add_foreign_key "credit_transactions", "accounts"
   add_foreign_key "credit_transactions", "verification_runs"
   add_foreign_key "layer_results", "verification_runs"

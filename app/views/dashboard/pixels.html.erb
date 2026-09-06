@@ -1,0 +1,625 @@
+<div class="crm-shell">
+  <aside class="crm-sidebar">
+    <div class="crm-brand">
+      <div class="brand-mark">SP</div>
+
+      <div>
+        <strong>Super Pixel</strong>
+        <span>Verification CRM</span>
+      </div>
+    </div>
+
+    <nav class="crm-nav">
+      <a href="/crm">Leads</a>
+      <a href="/pixels-page" class="active">Pixels</a>
+    </nav>
+
+    <div class="crm-user">
+      <strong><%= @current_user.name %></strong>
+      <span><%= @current_user.role.humanize %></span>
+      <span><%= @current_user.email %></span>
+    </div>
+  </aside>
+
+  <main class="crm-main">
+    <header class="crm-header">
+      <div>
+        <h1>Pixel Management</h1>
+        <p>
+          Configure landing pages and verification modules.
+        </p>
+      </div>
+
+      <button
+        id="new-pixel-button"
+        class="primary-button"
+      >
+        + New Pixel
+      </button>
+    </header>
+
+    <section class="crm-panel pixel-panel">
+      <div class="crm-panel-header">
+        <div>
+          <h2>Pixels</h2>
+          <span id="pixel-count">Loading...</span>
+        </div>
+      </div>
+
+      <div id="pixels-list">
+        <div class="crm-empty">
+          Loading pixels...
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="pixel-modal" class="modal-backdrop hidden">
+  <div class="pixel-modal">
+    <div class="modal-header">
+      <div>
+        <span class="detail-label">
+          Pixel configuration
+        </span>
+
+        <h2 id="modal-title">
+          Create Pixel
+        </h2>
+      </div>
+
+      <button
+        id="close-modal"
+        class="icon-button"
+        type="button"
+      >
+        ×
+      </button>
+    </div>
+
+    <form id="pixel-form">
+      <div class="field">
+        <label for="pixel-name">
+          Pixel name
+        </label>
+
+        <input
+          id="pixel-name"
+          type="text"
+          placeholder="SolarPro Main Pixel"
+          required
+        >
+      </div>
+
+      <div class="field">
+        <label for="allowed-pages">
+          Allowed landing pages
+        </label>
+
+        <textarea
+          id="allowed-pages"
+          rows="4"
+          placeholder="http://localhost:3001/examples/landing-page.html"
+        ></textarea>
+
+        <span class="field-help">
+          One URL per line. Leave empty to allow all pages.
+        </span>
+      </div>
+
+      <div class="field">
+        <label>
+          Verification modules
+        </label>
+
+        <div
+          id="module-options"
+          class="module-grid"
+        ></div>
+      </div>
+
+      <label class="toggle-row">
+        <input
+          id="pixel-active"
+          type="checkbox"
+          checked
+        >
+
+        <span>
+          Pixel active
+        </span>
+      </label>
+
+      <div
+        id="pixel-error"
+        class="error-message"
+      ></div>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          id="cancel-pixel"
+          class="secondary-button"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          id="save-pixel"
+          class="primary-button"
+        >
+          Save Pixel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="snippet-modal" class="modal-backdrop hidden">
+  <div class="pixel-modal">
+    <div class="modal-header">
+      <div>
+        <span class="detail-label">
+          Installation
+        </span>
+
+        <h2>Embed Pixel</h2>
+      </div>
+
+      <button
+        id="close-snippet"
+        class="icon-button"
+      >
+        ×
+      </button>
+    </div>
+
+    <p class="muted-text">
+      Add this script to the landing page before the closing body tag.
+    </p>
+
+    <pre
+      id="snippet-code"
+      class="snippet-code"
+    ></pre>
+
+    <button
+      id="copy-snippet"
+      class="primary-button"
+      type="button"
+    >
+      Copy snippet
+    </button>
+  </div>
+</div>
+
+<script>
+  let pixels = [];
+  let editingPixel = null;
+  let availableModules = [];
+
+  const pixelModal =
+    document.getElementById("pixel-modal");
+
+  const snippetModal =
+    document.getElementById("snippet-modal");
+
+  const pixelForm =
+    document.getElementById("pixel-form");
+
+  const pixelsList =
+    document.getElementById("pixels-list");
+
+  const moduleOptions =
+    document.getElementById("module-options");
+
+  const pixelError =
+    document.getElementById("pixel-error");
+
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = value ?? "";
+    return div.innerHTML;
+  }
+
+  function formatModuleName(name) {
+    return name
+      .replaceAll("_", " ")
+      .replace(/\b\w/g, letter =>
+        letter.toUpperCase()
+      );
+  }
+
+  async function loadPixels() {
+    try {
+      const response = await fetch("/pixels", {
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json"
+        }
+      });
+
+      if (response.status === 401) {
+        window.location.href = "/login-page";
+        return;
+      }
+
+      if (response.status === 403) {
+        window.location.href = "/crm";
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          "Unable to load pixels"
+        );
+      }
+
+      const data = await response.json();
+
+      pixels = data.results || [];
+
+      availableModules =
+        pixels[0]?.available_modules || [];
+
+      renderPixels();
+    } catch (error) {
+      pixelsList.innerHTML = `
+        <div class="crm-empty crm-error">
+          ${escapeHtml(error.message)}
+        </div>
+      `;
+    }
+  }
+
+  function renderPixels() {
+    document.getElementById(
+      "pixel-count"
+    ).textContent =
+      `${pixels.length} configured`;
+
+    if (!pixels.length) {
+      pixelsList.innerHTML = `
+        <div class="crm-empty">
+          No pixels configured yet.
+        </div>
+      `;
+
+      return;
+    }
+
+    pixelsList.innerHTML =
+      pixels.map(pixel => `
+        <div class="pixel-card">
+          <div class="pixel-card-main">
+            <div class="pixel-title-row">
+              <strong>
+                ${escapeHtml(pixel.name)}
+              </strong>
+
+              <span class="${
+                pixel.active
+                  ? "badge badge-success"
+                  : "badge badge-muted"
+              }">
+                ${
+                  pixel.active
+                    ? "ACTIVE"
+                    : "DISABLED"
+                }
+              </span>
+            </div>
+
+            <span class="cell-secondary">
+              ${escapeHtml(pixel.public_id)}
+            </span>
+
+            <div class="pixel-module-list">
+              ${(pixel.enabled_modules || [])
+                .map(module => `
+                  <span class="module-chip">
+                    ${escapeHtml(
+                      formatModuleName(module)
+                    )}
+                  </span>
+                `)
+                .join("")}
+            </div>
+
+            <span class="cell-secondary">
+              ${
+                pixel.allowed_pages?.length
+                  ? `${pixel.allowed_pages.length} allowed page(s)`
+                  : "All landing pages allowed"
+              }
+            </span>
+          </div>
+
+          <div class="pixel-card-actions">
+            <button
+              class="secondary-button"
+              onclick="showSnippet('${pixel.public_id}')"
+            >
+              Install
+            </button>
+
+            <button
+              class="secondary-button"
+              onclick="editPixel('${pixel.public_id}')"
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+      `).join("");
+  }
+
+  function renderModuleOptions(selected = []) {
+    moduleOptions.innerHTML =
+      availableModules.map(module => `
+        <label class="module-option">
+          <input
+            type="checkbox"
+            value="${escapeHtml(module)}"
+            ${
+              selected.includes(module)
+                ? "checked"
+                : ""
+            }
+          >
+
+          <span>
+            ${escapeHtml(
+              formatModuleName(module)
+            )}
+          </span>
+        </label>
+      `).join("");
+  }
+
+  function openCreateModal() {
+    editingPixel = null;
+
+    document.getElementById(
+      "modal-title"
+    ).textContent = "Create Pixel";
+
+    document.getElementById(
+      "pixel-name"
+    ).value = "";
+
+    document.getElementById(
+      "allowed-pages"
+    ).value = "";
+
+    document.getElementById(
+      "pixel-active"
+    ).checked = true;
+
+    pixelError.textContent = "";
+
+    renderModuleOptions([]);
+
+    pixelModal.classList.remove("hidden");
+  }
+
+  function editPixel(publicId) {
+    const pixel = pixels.find(
+      item => item.public_id === publicId
+    );
+
+    if (!pixel) return;
+
+    editingPixel = pixel;
+
+    availableModules =
+      pixel.available_modules || [];
+
+    document.getElementById(
+      "modal-title"
+    ).textContent = "Edit Pixel";
+
+    document.getElementById(
+      "pixel-name"
+    ).value = pixel.name;
+
+    document.getElementById(
+      "allowed-pages"
+    ).value =
+      (pixel.allowed_pages || []).join("\n");
+
+    document.getElementById(
+      "pixel-active"
+    ).checked = pixel.active;
+
+    pixelError.textContent = "";
+
+    renderModuleOptions(
+      pixel.enabled_modules || []
+    );
+
+    pixelModal.classList.remove("hidden");
+  }
+
+  function closePixelModal() {
+    pixelModal.classList.add("hidden");
+  }
+
+  async function showSnippet(publicId) {
+    try {
+      const response = await fetch(
+        `/pixels/${encodeURIComponent(publicId)}`,
+        {
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json"
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Unable to load pixel"
+        );
+      }
+
+      const data = await response.json();
+
+      const snippet = `
+<script
+  src="/examples/super-pixel.js"
+  data-pixel-id="${data.public_id}"
+  data-endpoint="${window.location.origin}">
+<\/script>
+      `.trim();
+
+      document.getElementById(
+        "snippet-code"
+      ).textContent = snippet;
+
+      snippetModal.classList.remove("hidden");
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  pixelForm.addEventListener(
+    "submit",
+    async function(event) {
+      event.preventDefault();
+
+      pixelError.textContent = "";
+
+      const selectedModules =
+        Array.from(
+          moduleOptions.querySelectorAll(
+            "input:checked"
+          )
+        ).map(input => input.value);
+
+      const allowedPages =
+        document.getElementById(
+          "allowed-pages"
+        ).value
+          .split("\n")
+          .map(value => value.trim())
+          .filter(Boolean);
+
+      const payload = {
+        pixel: {
+          name:
+            document.getElementById(
+              "pixel-name"
+            ).value.trim(),
+
+          allowed_pages: allowedPages,
+
+          enabled_modules:
+            selectedModules,
+
+          active:
+            document.getElementById(
+              "pixel-active"
+            ).checked
+        }
+      };
+
+      const url =
+        editingPixel
+          ? `/pixels/${encodeURIComponent(
+              editingPixel.public_id
+            )}`
+          : "/pixels";
+
+      const method =
+        editingPixel ? "PATCH" : "POST";
+
+      try {
+        const response = await fetch(url, {
+          method,
+          credentials: "same-origin",
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Accept:
+              "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.errors?.join(", ") ||
+            data.error ||
+            "Unable to save pixel"
+          );
+        }
+
+        closePixelModal();
+        await loadPixels();
+      } catch (error) {
+        pixelError.textContent =
+          error.message;
+      }
+    }
+  );
+
+  document.getElementById(
+    "new-pixel-button"
+  ).addEventListener(
+    "click",
+    openCreateModal
+  );
+
+  document.getElementById(
+    "close-modal"
+  ).addEventListener(
+    "click",
+    closePixelModal
+  );
+
+  document.getElementById(
+    "cancel-pixel"
+  ).addEventListener(
+    "click",
+    closePixelModal
+  );
+
+  document.getElementById(
+    "close-snippet"
+  ).addEventListener(
+    "click",
+    function() {
+      snippetModal.classList.add("hidden");
+    }
+  );
+
+  document.getElementById(
+    "copy-snippet"
+  ).addEventListener(
+    "click",
+    async function() {
+      const snippet =
+        document.getElementById(
+          "snippet-code"
+        ).textContent;
+
+      await navigator.clipboard.writeText(
+        snippet
+      );
+
+      this.textContent = "Copied";
+
+      setTimeout(() => {
+        this.textContent = "Copy snippet";
+      }, 1200);
+    }
+  );
+
+  loadPixels();
+</script>

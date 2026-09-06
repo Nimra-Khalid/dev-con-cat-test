@@ -1,9 +1,10 @@
 class Pixel < ApplicationRecord
-  
   belongs_to :account
 
-  has_many :pixel_sessions, 
-            dependent: :restrict_with_error
+  has_many :pixel_sessions,
+           dependent: :restrict_with_error
+
+  before_validation :generate_public_id, on: :create
 
   validates :public_id,
             presence: true,
@@ -18,6 +19,12 @@ class Pixel < ApplicationRecord
   validate :enabled_modules_must_belong_to_account
 
   private
+
+  def generate_public_id
+    return if public_id.present?
+
+    self.public_id = "px_#{SecureRandom.uuid}"
+  end
 
   def enabled_modules_must_belong_to_account
     return if account.nil?

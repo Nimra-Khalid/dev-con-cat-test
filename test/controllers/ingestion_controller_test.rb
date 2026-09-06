@@ -1,6 +1,7 @@
 require "test_helper"
 
 class IngestionControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
   def setup
     @account = Account.create!(
       external_id: "acct_ingestion_test",
@@ -70,24 +71,20 @@ class IngestionControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
-  test "lead submission creates lead and returns verdict" do
-    session =
-      @pixel.pixel_sessions.create!(
-        session_id: "session_ingestion_2",
-        page_url: "https://example.com/landing",
-        started_at: Time.current
-      )
+test "lead submission creates lead and queues verification" do
+  session =
+    @pixel.pixel_sessions.create!(
+      session_id: "session_ingestion_2",
+      page_url: "https://example.com/landing",
+      started_at: Time.current
+    )
 
+  perform_enqueued_jobs do
     post "/leads",
          params: {
            pixel_id: @pixel.public_id,
            session_id: session.session_id,
-
-           # Using an existing fixture lead ID
-           # lets the VerificationRunner find
-           # matching mock provider responses.
            lead_id: "L-1001",
-
            submitted_at: Time.current.iso8601,
            form_dwell_ms: 2500,
 
@@ -99,27 +96,46 @@ class IngestionControllerTest < ActionDispatch::IntegrationTest
            }
          },
          as: :json
-
-    assert_response :created
-
-    body = JSON.parse(response.body)
-
-    assert_equal "L-1001", body["lead_id"]
-    assert_equal "ACCEPT", body["verdict"]
-
-    lead =
-      Lead.find_by!(
-        external_id: "L-1001"
-      )
-
-    assert_equal session.id, lead.pixel_session_id
-    assert_equal "jane@example.com", lead.email
-
-    assert_equal(
-      1,
-      lead.verification_runs.count
-    )
   end
+
+  assert_response :accepted
+
+  body = JSON.parse(response.body)
+
+  assert_equal "L-1001", body["lead_id"]
+
+  assert_equal(
+    "verification_queued",
+    body["status"]
+  )
+
+  lead =
+    Lead.find_by!(
+      external_id: "L-1001"
+    )
+
+  assert_equal(
+    session.id,
+    lead.pixel_session_id
+  )
+
+  assert_equal(
+    "jane@example.com",
+    lead.email
+  )
+
+  assert_equal(
+    1,
+    lead.verification_runs.count
+  )
+
+  assert_equal(
+    "ACCEPT",
+    lead.verification_runs.last
+      .verdict
+      .decision
+  )
+end
 
   test "activity endpoint returns verification events" do
   session =

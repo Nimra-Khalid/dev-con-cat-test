@@ -18,6 +18,9 @@ class VerificationRun < ApplicationRecord
   has_many :credit_transactions,
          dependent: :destroy          
 
+  has_one :consent_certificate,
+        dependent: :restrict_with_error
+        
   validates :status,
             inclusion: { in: STATUSES }
 

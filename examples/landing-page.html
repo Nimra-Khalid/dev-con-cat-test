@@ -3,20 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <title>Solar Savings — Free Quote (Super Pixel demo)</title>
 
     <!--
-      THE SUPER PIXEL SNIPPET.
-      In production a buyer pastes exactly this one line into their <head>, just
-      like a TrustedForm snippet. Point data-endpoint at your Rails ingestion
-      API. With no data-endpoint it runs in local simulation mode so this page
-      is demoable with zero backend.
+      THE SUPER PIXEL SNIPPET
 
-      <script async src="/super-pixel.js"
-              data-pixel-id="px_9f2a01"
-              data-endpoint="https://your-rails-app.example/api/pixel"></script>
+      In production, the buyer pastes one tag into their landing page.
+
+      data-pixel-id:
+        Identifies the Pixel configuration stored in Rails.
+
+      data-endpoint:
+        Points the browser to our Rails ingestion API.
+
+      When data-endpoint is removed, super-pixel.js falls back
+      to its local simulation mode.
     -->
-    <script src="./super-pixel.js" data-pixel-id="px_9f2a01"></script>
+    <script
+      src="./super-pixel.js"
+      data-pixel-id="px_9f2a01"
+      data-endpoint="http://localhost:3000"
+    ></script>
 
     <style>
       :root {
@@ -31,154 +39,401 @@
         --fail: #ef4444;
         --skip: #64748b;
       }
-      * { box-sizing: border-box; }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font:
+          15px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+
         background: var(--bg);
         color: var(--ink);
       }
+
       .wrap {
         max-width: 1040px;
         margin: 0 auto;
         padding: 32px 20px 64px;
+
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 24px;
       }
-      @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
-      header { grid-column: 1 / -1; }
-      h1 { margin: 0 0 6px; font-size: 26px; }
-      .sub { color: var(--muted); margin: 0; }
+
+      @media (max-width: 820px) {
+        .wrap {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      header {
+        grid-column: 1 / -1;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 26px;
+      }
+
+      .sub {
+        color: var(--muted);
+        margin: 0;
+      }
+
       .card {
         background: var(--card);
         border: 1px solid var(--line);
         border-radius: 14px;
         padding: 22px;
       }
-      label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin: 14px 0 6px;
+      }
+
       input {
         width: 100%;
         padding: 11px 12px;
+
         border-radius: 9px;
         border: 1px solid var(--line);
+
         background: #0e1728;
         color: var(--ink);
+
         font-size: 15px;
       }
-      input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
-      .consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; }
-      .consent input { width: auto; margin-top: 3px; }
-      .consent small { color: var(--muted); }
+
+      input:focus {
+        outline: 2px solid var(--accent);
+        border-color: var(--accent);
+      }
+
+      .consent {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        margin-top: 16px;
+      }
+
+      .consent input {
+        width: auto;
+        margin-top: 3px;
+      }
+
+      .consent small {
+        color: var(--muted);
+      }
+
       button {
         margin-top: 18px;
         width: 100%;
         padding: 13px;
+
         border: 0;
         border-radius: 10px;
+
         background: var(--accent);
         color: #fff;
+
         font-size: 16px;
         font-weight: 600;
+
         cursor: pointer;
       }
-      button:hover { filter: brightness(1.08); }
 
-      .panel-title { display: flex; justify-content: space-between; align-items: baseline; }
-      .panel-title h2 { font-size: 15px; margin: 0; }
-      .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--skip); margin-right: 8px; }
-      .live { font-size: 12px; color: var(--muted); }
-      .live b { color: var(--pass); }
-      .feed { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow: auto; }
+      button:hover {
+        filter: brightness(1.08);
+      }
+
+      .panel-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+
+      .panel-title h2 {
+        font-size: 15px;
+        margin: 0;
+      }
+
+      .dot {
+        display: inline-block;
+
+        width: 8px;
+        height: 8px;
+
+        border-radius: 50%;
+
+        background: var(--skip);
+
+        margin-right: 8px;
+      }
+
+      .live {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .live b {
+        color: var(--pass);
+      }
+
+      .feed {
+        margin-top: 14px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        max-height: 460px;
+        overflow: auto;
+      }
+
       .row {
         display: grid;
         grid-template-columns: 20px 150px 1fr auto;
+
         align-items: center;
         gap: 10px;
+
         padding: 9px 10px;
+
         border: 1px solid var(--line);
         border-radius: 9px;
+
         background: #0e1728;
+
         animation: pop 0.18s ease;
       }
-      @keyframes pop { from { opacity: 0; transform: translateY(4px); } }
-      .row .layer { font-weight: 600; font-size: 13px; }
-      .row .detail { color: var(--muted); font-size: 12.5px; }
-      .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; }
-      .b-pass { background: rgba(34,197,94,.15); color: var(--pass); }
-      .b-warn { background: rgba(245,158,11,.15); color: var(--warn); }
-      .b-fail { background: rgba(239,68,68,.15); color: var(--fail); }
-      .b-skip { background: rgba(100,116,139,.18); color: var(--skip); }
-      .b-info { background: rgba(59,130,246,.15); color: var(--accent); }
-      .final {
-        margin-top: 14px; padding: 14px; border-radius: 11px; text-align: center;
-        font-weight: 800; font-size: 18px; letter-spacing: .03em; display: none;
+
+      @keyframes pop {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
       }
-      .empty { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
-      code { background: #0e1728; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); font-size: 12px; }
+
+      .row .layer {
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .row .detail {
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+
+      .badge {
+        font-size: 11px;
+        font-weight: 700;
+
+        padding: 3px 9px;
+
+        border-radius: 999px;
+
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .b-pass {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--pass);
+      }
+
+      .b-warn {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--warn);
+      }
+
+      .b-fail {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--fail);
+      }
+
+      .b-skip {
+        background: rgba(100, 116, 139, 0.18);
+        color: var(--skip);
+      }
+
+      .b-info {
+        background: rgba(59, 130, 246, 0.15);
+        color: var(--accent);
+      }
+
+      .final {
+        margin-top: 14px;
+        padding: 14px;
+
+        border-radius: 11px;
+
+        text-align: center;
+
+        font-weight: 800;
+        font-size: 18px;
+        letter-spacing: 0.03em;
+
+        display: none;
+      }
+
+      .empty {
+        color: var(--muted);
+
+        font-size: 13px;
+
+        padding: 20px;
+
+        text-align: center;
+      }
+
+      code {
+        background: #0e1728;
+
+        padding: 1px 6px;
+
+        border-radius: 5px;
+        border: 1px solid var(--line);
+
+        font-size: 12px;
+      }
     </style>
   </head>
+
   <body>
     <div class="wrap">
       <header>
         <h1>Get your free solar savings quote ☀️</h1>
+
         <p class="sub">
-          Demo funnel. The <code>super-pixel.js</code> tag in the head is watching
-          this form. Fill it out and hit submit to see every detection layer report
-          live in the panel on the right.
+          Demo funnel. The
+          <code>super-pixel.js</code>
+          tag in the head is watching this form. Fill it out and hit submit to
+          see every detection layer report live from the Rails verification
+          backend.
         </p>
       </header>
 
-      <!-- Buyer's lead form. data-pixel-form auto-attaches the pixel. -->
+      <!--
+        Buyer's lead form.
+
+        data-pixel-form:
+          super-pixel.js automatically attaches tracking.
+
+        data-pixel-demo:
+          prevents normal page navigation after submit so
+          we can watch verification results appear.
+      -->
       <form class="card" data-pixel-form data-pixel-demo>
-        <label for="first_name">First name</label>
+        <label for="first_name"> First name </label>
+
         <input id="first_name" name="first_name" autocomplete="given-name" />
 
-        <label for="last_name">Last name</label>
+        <label for="last_name"> Last name </label>
+
         <input id="last_name" name="last_name" autocomplete="family-name" />
 
-        <label for="email">Email</label>
+        <label for="email"> Email </label>
+
         <input id="email" name="email" type="email" autocomplete="email" />
 
-        <label for="phone">Phone</label>
-        <input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+1 555 555 0142" />
+        <label for="phone"> Phone </label>
+
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          autocomplete="tel"
+          placeholder="+1 555 555 0142"
+        />
 
         <label class="consent">
           <input type="checkbox" name="consent" />
+
           <small>
-            By checking this box I agree to be contacted by phone/SMS at the number
-            provided, including by automated means. (This is the TCPA consent
-            language your TrustedForm certificate must capture.)
+            By checking this box I agree to be contacted by phone/SMS at the
+            number provided, including by automated means. (This is the TCPA
+            consent language your TrustedForm certificate must capture.)
           </small>
         </label>
+
+        <label for="fixture_key"> Demo provider response scenario </label>
+
+        <select
+          id="fixture_key"
+          name="fixture_key"
+          style="
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 9px;
+            border: 1px solid var(--line);
+            background: #0e1728;
+            color: var(--ink);
+            font-size: 15px;
+          "
+        >
+          <option value="">Loading supplied demo leads...</option>
+        </select>
+
+        <small style="display: block; color: var(--muted); margin-top: 7px">
+          Demo only — selecting a scenario loads the corresponding lead from
+          mock-data/leads.json. You can edit the values before submitting.
+        </small>
 
         <button type="submit">Get my quote</button>
       </form>
 
-      <!-- Real-time Super Pixel activity panel -->
+      <!-- Real Rails-backed Super Pixel activity panel -->
       <div class="card">
         <div class="panel-title">
-          <h2><span class="dot" id="dot"></span>Super Pixel — live activity</h2>
-          <span class="live" id="live">idle</span>
+          <h2>
+            <span class="dot" id="dot"></span>
+
+            Super Pixel — live activity
+          </h2>
+
+          <span class="live" id="live"> idle </span>
         </div>
+
         <div class="feed" id="feed">
           <div class="empty" id="empty">
-            Waiting for pixel events… interact with the form to see field capture,
-            then submit to run the detection layers.
+            Waiting for pixel events… Interact with the form to see field
+            capture, then submit to run the real detection layers.
           </div>
         </div>
+
         <div class="final" id="final"></div>
       </div>
     </div>
 
     <script>
-      // This block is the HOST PAGE consuming the pixel's event stream. In your
-      // build, these same events should be driven by your Rails backend
-      // (via SSE / WebSocket / ActionCable) as real verification jobs finish.
+      /*
+       * HOST PAGE
+       * ----------------------------------------------------------
+       *
+       * This page does not perform fraud detection itself.
+       *
+       * super-pixel.js emits activity events and this block only
+       * translates those events into UI.
+       */
+
       var feed = document.getElementById("feed");
+
       var empty = document.getElementById("empty");
+
       var live = document.getElementById("live");
+
       var dot = document.getElementById("dot");
+
       var finalEl = document.getElementById("final");
 
       var LABELS = {
@@ -195,63 +450,409 @@
         consensus: "Consensus",
       };
 
-      function badgeClass(v) {
-        return v === "pass" ? "b-pass"
-          : v === "warn" ? "b-warn"
-          : v === "fail" ? "b-fail"
-          : v === "skip" ? "b-skip"
-          : "b-info";
+      function badgeClass(verdict) {
+        return verdict === "pass"
+          ? "b-pass"
+          : verdict === "warn"
+            ? "b-warn"
+            : verdict === "fail"
+              ? "b-fail"
+              : verdict === "skip"
+                ? "b-skip"
+                : "b-info";
+      }
+
+      function verdictColor(verdict) {
+        return verdict === "fail"
+          ? "fail"
+          : verdict === "warn"
+            ? "warn"
+            : verdict === "skip"
+              ? "skip"
+              : verdict === "info"
+                ? "accent"
+                : "pass";
       }
 
       function addRow(layerKey, verdict, detail) {
-        if (empty) { empty.remove(); empty = null; }
+        if (empty) {
+          empty.remove();
+          empty = null;
+        }
+
         var row = document.createElement("div");
+
         row.className = "row";
+
         row.innerHTML =
           '<span class="dot" style="background:var(--' +
-          (verdict === "fail" ? "fail" : verdict === "warn" ? "warn" : verdict === "skip" ? "skip" : "pass") +
+          verdictColor(verdict) +
           ')"></span>' +
-          '<span class="layer">' + (LABELS[layerKey] || layerKey) + "</span>" +
-          '<span class="detail">' + (detail || "") + "</span>" +
-          '<span class="badge ' + badgeClass(verdict) + '">' + verdict + "</span>";
+          '<span class="layer">' +
+          (LABELS[layerKey] || layerKey) +
+          "</span>" +
+          '<span class="detail">' +
+          (detail || "") +
+          "</span>" +
+          '<span class="badge ' +
+          badgeClass(verdict) +
+          '">' +
+          verdict +
+          "</span>";
+
         feed.appendChild(row);
+
         feed.scrollTop = feed.scrollHeight;
+      }
+
+      function showFinalVerdict(evt) {
+        finalEl.style.display = "block";
+
+        /*
+         * Rails risk_score is already an integer score.
+         *
+         * Example:
+         *   0
+         *   35
+         *   60
+         *
+         * Therefore we DO NOT multiply it by 100.
+         */
+
+        var score = Number(evt.score || 0);
+
+        if (evt.verdict === "ACCEPT") {
+          finalEl.style.background = "rgba(34,197,94,.15)";
+
+          finalEl.style.color = "var(--pass)";
+
+          dot.style.background = "var(--pass)";
+        } else if (evt.verdict === "REVIEW") {
+          finalEl.style.background = "rgba(245,158,11,.15)";
+
+          finalEl.style.color = "var(--warn)";
+
+          dot.style.background = "var(--warn)";
+        } else {
+          finalEl.style.background = "rgba(239,68,68,.15)";
+
+          finalEl.style.color = "var(--fail)";
+
+          dot.style.background = "var(--fail)";
+        }
+
+        var reasonText = "";
+
+        if (Array.isArray(evt.reasons) && evt.reasons.length > 0) {
+          reasonText = " · " + evt.reasons.join("; ");
+        }
+
+        finalEl.textContent =
+          evt.verdict + " · risk score " + score + reasonText;
+
+        live.textContent = "done";
       }
 
       if (window.SuperPixel) {
         window.SuperPixel.onActivity(function (evt) {
           switch (evt.type) {
             case "session_started":
-              live.textContent = "session " + evt.session.session_id.slice(0, 14) + "…";
+              live.textContent =
+                "session " + evt.session.session_id.slice(0, 14) + "…";
+
               dot.style.background = "var(--accent)";
+
               break;
+
             case "field":
-              live.innerHTML = "capturing: <b>" + evt.interaction.name + "</b> (" + evt.interaction.action + ")";
+              live.innerHTML =
+                "capturing: <b>" +
+                evt.interaction.name +
+                "</b> (" +
+                evt.interaction.action +
+                ")";
+
               dot.style.background = "var(--warn)";
+
               break;
+
             case "submitted":
-              addRow("consensus", "info", "Lead submitted — running detection layers…");
+              addRow(
+                "consensus",
+                "info",
+                "Lead submitted — running detection layers…",
+              );
+
               live.innerHTML = "<b>verifying…</b>";
+
               break;
+
             case "layer_result":
               addRow(evt.layer, evt.verdict, evt.detail);
+
               break;
+
             case "info":
               addRow("consensus", "info", evt.message);
+
               break;
+
             case "final_verdict":
-              finalEl.style.display = "block";
-              var pass = evt.verdict === "ACCEPT";
-              finalEl.style.background = pass ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)";
-              finalEl.style.color = pass ? "var(--pass)" : "var(--fail)";
-              finalEl.textContent =
-                evt.verdict + "  ·  score " + Math.round((evt.score || 0) * 100) + "%";
-              live.textContent = "done";
-              dot.style.background = pass ? "var(--pass)" : "var(--fail)";
+              showFinalVerdict(evt);
               break;
           }
         });
       }
+
+      /*
+       * ----------------------------------------------------------
+       * Demo lead auto-fill
+       * ----------------------------------------------------------
+       *
+       * The assignment provides mock-data/leads.json.
+       *
+       * We load those leads only to make the demo convenient.
+       * The selected scenario ID is also sent as fixture_key so
+       * our mock provider adapters know which provider responses
+       * to use.
+       *
+       * The verdict itself is NOT stored here.
+       * ConsensusEngine still calculates ACCEPT/REVIEW/REJECT.
+       */
+
+      var fixtureSelect = document.getElementById("fixture_key");
+
+      var demoLeadsById = {};
+
+      var SCENARIO_LABELS = {
+        "L-1001": "Clean lead",
+        "L-1002": "Bot / disposable email",
+        "L-1003": "VPN / IP mismatch",
+        "L-1004": "Exact duplicate",
+        "L-1005": "Litigator + DNC",
+        "L-1006": "DNC listed",
+        "L-1007": "Phone provider disagreement",
+        "L-1008": "Email validation issue",
+        "L-1009": "Fraud farm / reused voice",
+        "L-1010": "TrustedForm mismatch",
+        "L-1011": "Enrichment disagreement",
+        "L-1012": "Clean high-value soft duplicate",
+      };
+
+      function leadScenarioId(lead, fallbackId) {
+        return (
+          lead.lead_id ||
+          lead.external_id ||
+          lead.id ||
+          lead.scenario_id ||
+          fallbackId ||
+          null
+        );
+      }
+
+      function leadField(lead, snakeName, camelName) {
+        /*
+         * Support a few reasonable fixture shapes:
+         *
+         * {
+         *   first_name: "Jane"
+         * }
+         *
+         * or:
+         *
+         * {
+         *   fields: {
+         *     first_name: "Jane"
+         *   }
+         * }
+         */
+
+        if (lead[snakeName] !== undefined && lead[snakeName] !== null) {
+          return lead[snakeName];
+        }
+
+        if (
+          camelName &&
+          lead[camelName] !== undefined &&
+          lead[camelName] !== null
+        ) {
+          return lead[camelName];
+        }
+
+        if (lead.fields) {
+          if (lead.fields[snakeName] !== undefined) {
+            return lead.fields[snakeName];
+          }
+
+          if (camelName && lead.fields[camelName] !== undefined) {
+            return lead.fields[camelName];
+          }
+        }
+
+        return "";
+      }
+
+      function normalizeLeadCollection(data) {
+        /*
+         * This handles the common fixture formats:
+         *
+         * [ {...}, {...} ]
+         *
+         * { "leads": [...] }
+         *
+         * { "results": [...] }
+         *
+         * or:
+         *
+         * {
+         *   "L-1001": {...},
+         *   "L-1002": {...}
+         * }
+         */
+
+        if (Array.isArray(data)) {
+          return data;
+        }
+
+        if (data && Array.isArray(data.leads)) {
+          return data.leads;
+        }
+
+        if (data && Array.isArray(data.results)) {
+          return data.results;
+        }
+
+        if (data && typeof data === "object") {
+          return Object.keys(data)
+            .map(function (key) {
+              var value = data[key];
+
+              if (value && typeof value === "object") {
+                return Object.assign(
+                  {
+                    __fixture_id: key,
+                  },
+                  value,
+                );
+              }
+
+              return null;
+            })
+            .filter(Boolean);
+        }
+
+        return [];
+      }
+
+      function populateFormFromLead(lead) {
+        if (!lead) {
+          return;
+        }
+
+        var firstName = document.getElementById("first_name");
+
+        var lastName = document.getElementById("last_name");
+
+        var email = document.getElementById("email");
+
+        var phone = document.getElementById("phone");
+
+        firstName.value = leadField(lead, "first_name", "firstName");
+
+        lastName.value = leadField(lead, "last_name", "lastName");
+
+        email.value = leadField(lead, "email", "email");
+
+        phone.value = leadField(lead, "phone", "phone");
+
+        /*
+         * Dispatch change events so the Super Pixel's
+         * normal field instrumentation sees the auto-fill
+         * just like a user changing the form.
+         */
+
+        [firstName, lastName, email, phone].forEach(function (element) {
+          element.dispatchEvent(
+            new Event("change", {
+              bubbles: true,
+            }),
+          );
+        });
+      }
+
+      function loadDemoLeads() {
+        fetch("../mock-data/leads.json", {
+          cache: "no-store",
+        })
+          .then(function (response) {
+            if (!response.ok) {
+              throw new Error("Could not load leads.json");
+            }
+
+            return response.json();
+          })
+          .then(function (data) {
+            var leads = normalizeLeadCollection(data);
+
+            fixtureSelect.innerHTML = "";
+
+            leads.forEach(function (lead) {
+              var id = leadScenarioId(lead, lead.__fixture_id);
+
+              if (!id) {
+                return;
+              }
+
+              demoLeadsById[id] = lead;
+
+              var option = document.createElement("option");
+
+              option.value = id;
+
+              option.textContent =
+                id + " — " + (SCENARIO_LABELS[id] || "Demo lead");
+
+              fixtureSelect.appendChild(option);
+            });
+
+            if (fixtureSelect.options.length === 0) {
+              throw new Error("No demo leads were found in leads.json");
+            }
+
+            /*
+             * Default to the clean scenario.
+             */
+
+            if (demoLeadsById["L-1001"]) {
+              fixtureSelect.value = "L-1001";
+            }
+
+            populateFormFromLead(demoLeadsById[fixtureSelect.value]);
+          })
+          .catch(function (error) {
+            console.error("Demo lead loading failed:", error);
+
+            fixtureSelect.innerHTML =
+              '<option value="">' + "Could not load demo leads" + "</option>";
+
+            addRow("consensus", "warn", "Could not load mock-data/leads.json");
+          });
+      }
+
+      fixtureSelect.addEventListener("change", function () {
+        populateFormFromLead(demoLeadsById[fixtureSelect.value]);
+
+        /*
+         * Reset the previous final verdict when switching
+         * to another scenario.
+         */
+
+        finalEl.style.display = "none";
+
+        live.textContent = "scenario " + fixtureSelect.value + " loaded";
+      });
+
+      loadDemoLeads();
     </script>
   </body>
 </html>

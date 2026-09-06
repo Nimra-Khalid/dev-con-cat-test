@@ -85,6 +85,8 @@ class IngestionController < ApplicationController
           params[:lead_id].presence ||
           generate_lead_id,
 
+        fixture_key: params[:fixture_key],
+
         first_name:
           field_value("first_name"),
 
@@ -122,20 +124,13 @@ class IngestionController < ApplicationController
 
     lead.save!
 
-    verdict =
-      VerificationRunner
-        .new(lead)
-        .call
+  VerificationJob.perform_later(lead.id)
 
-    render json: {
-      lead_id: lead.external_id,
-      verification_run_id:
-        verdict.verification_run_id,
-      verdict: verdict.decision,
-      risk_score: verdict.risk_score,
-      hard_stop: verdict.hard_stop,
-      reasons: verdict.reasons
-    }, status: :created
+  render json: {
+    lead_id: lead.external_id,
+    status: "verification_queued"
+  }, status: :accepted
+
   rescue ActiveRecord::RecordInvalid => e
     render json: {
       error: e.record.errors.full_messages

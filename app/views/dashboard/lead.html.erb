@@ -1,0 +1,493 @@
+<div class="crm-shell">
+  <aside class="crm-sidebar">
+    <div class="crm-brand">
+      <div class="brand-mark">SP</div>
+
+      <div>
+        <strong>Super Pixel</strong>
+        <span>Verification CRM</span>
+      </div>
+    </div>
+
+    <nav class="crm-nav">
+    <a href="/dashboard">Dashboard</a>
+      <a href="/crm" class="active">Leads</a>
+      <a href="/pixels-page">Pixels</a>
+    </nav>
+
+    <div class="crm-user">
+      <strong><%= @current_user.name %></strong>
+      <span><%= @current_user.role.humanize %></span>
+      <span><%= @current_user.email %></span>
+    </div>
+  </aside>
+
+  <main class="crm-main">
+    <header class="crm-header">
+      <div>
+        <a href="/crm" class="back-link">
+          ← Back to leads
+        </a>
+
+        <h1 id="lead-title">
+          Loading lead...
+        </h1>
+
+        <p id="lead-subtitle">
+          Verification details
+        </p>
+      </div>
+    </header>
+
+    <section id="lead-content">
+      <div class="crm-panel">
+        <div class="crm-empty">
+          Loading verification data...
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const leadId =
+    <%= raw params[:id].to_json %>;
+
+  const content =
+    document.getElementById("lead-content");
+
+  const title =
+    document.getElementById("lead-title");
+
+  const subtitle =
+    document.getElementById("lead-subtitle");
+
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = value ?? "";
+    return div.innerHTML;
+  }
+
+  function formatDate(value) {
+    if (!value) return "—";
+    return new Date(value).toLocaleString();
+  }
+
+  function verdictClass(decision) {
+    if (decision === "ACCEPT") {
+      return "badge badge-success";
+    }
+
+    if (decision === "REVIEW") {
+      return "badge badge-warning";
+    }
+
+    if (decision === "REJECT") {
+      return "badge badge-danger";
+    }
+
+    return "badge badge-muted";
+  }
+
+  function layerClass(verdict) {
+    if (verdict === "pass") {
+      return "badge badge-success";
+    }
+
+    if (verdict === "warn") {
+      return "badge badge-warning";
+    }
+
+    if (verdict === "fail") {
+      return "badge badge-danger";
+    }
+
+    return "badge badge-muted";
+  }
+
+  async function loadLead() {
+    try {
+      const response = await fetch(
+        `/crm/leads/${encodeURIComponent(leadId)}`,
+        {
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json"
+          }
+        }
+      );
+
+      if (response.status === 401) {
+        window.location.href = "/login-page";
+        return;
+      }
+
+      if (response.status === 404) {
+        throw new Error("Lead not found");
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          "Unable to load lead"
+        );
+      }
+
+      const lead = await response.json();
+
+      renderLead(lead);
+    } catch (error) {
+      content.innerHTML = `
+        <div class="crm-panel">
+          <div class="crm-empty crm-error">
+            ${escapeHtml(error.message)}
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  function renderLead(lead) {
+    const person = lead.person || {};
+    const verdict = lead.verdict || {};
+    const verification =
+      lead.verification || {};
+
+    const fullName =
+      [person.first_name, person.last_name]
+        .filter(Boolean)
+        .join(" ") || "Unknown Lead";
+
+    title.textContent = fullName;
+
+    subtitle.textContent =
+      `${lead.id} · ${person.email || "No email"}`;
+
+    const reasons =
+      verdict.reasons || [];
+
+    const layers =
+      lead.layers || [];
+
+    const activity =
+      lead.activity || [];
+
+    const certificate =
+      lead.certificate;
+
+    content.innerHTML = `
+      <div class="detail-grid">
+        <section class="crm-panel detail-card">
+          <div class="detail-heading">
+            <div>
+              <span class="detail-label">
+                Final verdict
+              </span>
+
+              <div class="detail-verdict-row">
+                <span class="${verdictClass(
+                  verdict.decision
+                )}">
+                  ${escapeHtml(
+                    verdict.decision || "PENDING"
+                  )}
+                </span>
+
+                <strong>
+                  Risk ${escapeHtml(
+                    verdict.risk_score ?? "—"
+                  )}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-info-grid">
+            <div>
+              <span>Name</span>
+              <strong>
+                ${escapeHtml(fullName)}
+              </strong>
+            </div>
+
+            <div>
+              <span>Email</span>
+              <strong>
+                ${escapeHtml(
+                  person.email || "—"
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Phone</span>
+              <strong>
+                ${escapeHtml(
+                  person.phone || "—"
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Campaign</span>
+              <strong>
+                ${escapeHtml(
+                  lead.campaign || "—"
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Submitted</span>
+              <strong>
+                ${escapeHtml(
+                  formatDate(
+                    lead.submitted_at
+                  )
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Pixel</span>
+              <strong>
+                ${escapeHtml(
+                  lead.pixel?.name || "—"
+                )}
+              </strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="crm-panel detail-card">
+          <div class="detail-heading">
+            <div>
+              <span class="detail-label">
+                Verification run
+              </span>
+
+              <h2>
+                ${escapeHtml(
+                  verification.status || "Unknown"
+                )}
+              </h2>
+            </div>
+          </div>
+
+          <div class="detail-info-grid">
+            <div>
+              <span>Policy</span>
+              <strong>
+                ${escapeHtml(
+                  verification.policy_version || "—"
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Started</span>
+              <strong>
+                ${escapeHtml(
+                  formatDate(
+                    verification.started_at
+                  )
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Completed</span>
+              <strong>
+                ${escapeHtml(
+                  formatDate(
+                    verification.completed_at
+                  )
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Hard stop</span>
+              <strong>
+                ${verdict.hard_stop ? "Yes" : "No"}
+              </strong>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="crm-panel detail-section">
+        <div class="crm-panel-header">
+          <h2>Decision reasons</h2>
+        </div>
+
+        <div class="detail-body">
+          ${
+            reasons.length
+              ? `
+                <ul class="reason-list">
+                  ${reasons.map(reason => `
+                    <li>
+                      ${escapeHtml(reason)}
+                    </li>
+                  `).join("")}
+                </ul>
+              `
+              : `
+                <span class="muted-text">
+                  No explicit reasons recorded.
+                </span>
+              `
+          }
+        </div>
+      </section>
+
+      <section class="crm-panel detail-section">
+        <div class="crm-panel-header">
+          <h2>Verification layers</h2>
+        </div>
+
+        <div class="layer-list">
+          ${
+            layers.length
+              ? layers.map(layer => `
+                <div class="layer-row">
+                  <div class="layer-main">
+                    <strong>
+                      ${escapeHtml(
+                        layer.layer_name
+                      )}
+                    </strong>
+
+                    <span>
+                      ${escapeHtml(
+                        layer.reason || ""
+                      )}
+                    </span>
+                  </div>
+
+                  <div class="layer-meta">
+                    <span class="${layerClass(
+                      layer.verdict
+                    )}">
+                      ${escapeHtml(
+                        layer.verdict ||
+                        layer.execution_status
+                      )}
+                    </span>
+
+                    <span>
+                      Risk ${escapeHtml(
+                        layer.risk_score ?? 0
+                      )}
+                    </span>
+
+                    <span>
+                      ${escapeHtml(
+                        layer.credit_cost ?? 0
+                      )} cr
+                    </span>
+                  </div>
+                </div>
+              `).join("")
+              : `
+                <div class="crm-empty">
+                  No layer results recorded.
+                </div>
+              `
+          }
+        </div>
+      </section>
+
+      <div class="detail-grid detail-bottom-grid">
+        <section class="crm-panel detail-section">
+          <div class="crm-panel-header">
+            <h2>Activity timeline</h2>
+          </div>
+
+          <div class="timeline">
+            ${
+              activity.length
+                ? activity.map(event => `
+                  <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+
+                    <div>
+                      <strong>
+                        ${escapeHtml(
+                          event.event_type
+                        )}
+                      </strong>
+
+                      <span>
+                        ${escapeHtml(
+                          formatDate(
+                            event.created_at
+                          )
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                `).join("")
+                : `
+                  <div class="crm-empty">
+                    No activity recorded.
+                  </div>
+                `
+            }
+          </div>
+        </section>
+
+        <section class="crm-panel detail-section">
+          <div class="crm-panel-header">
+            <h2>Consent certificate</h2>
+          </div>
+
+          <div class="detail-body">
+            ${
+              certificate
+                ? `
+                  <div class="certificate-box">
+                    <span class="detail-label">
+                      Certificate ID
+                    </span>
+
+                    <strong>
+                      ${escapeHtml(
+                        certificate.public_id
+                      )}
+                    </strong>
+
+                    <span class="muted-text">
+                      Issued:
+                      ${escapeHtml(
+                        formatDate(
+                          certificate.issued_at
+                        )
+                      )}
+                    </span>
+
+                    <a
+                      class="certificate-link"
+                      href="${escapeHtml(
+                        certificate.valid_url
+                      )}"
+                      target="_blank"
+                    >
+                      Verify certificate →
+                    </a>
+                  </div>
+                `
+                : `
+                  <span class="muted-text">
+                    No certificate issued.
+                  </span>
+                `
+            }
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
+  loadLead();
+</script>
