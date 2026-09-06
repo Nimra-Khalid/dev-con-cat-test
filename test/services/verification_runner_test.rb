@@ -225,4 +225,251 @@ class VerificationRunnerTest < ActiveSupport::TestCase
   assert_equal "REVIEW",
                verdict.decision
  end
+
+ test "detects recent exact duplicate within the same account" do
+  account = Account.create!(
+    external_id: "acct_duplicate_recent",
+    company_name: "Recent Duplicate Account",
+    plan: "growth",
+    monthly_credit_allowance: 100,
+    credits_used_this_cycle: 0,
+    status: "active",
+    enabled_modules: [
+      "duplicate_detection"
+    ]
+  )
+
+  pixel = account.pixels.create!(
+    public_id: "px_duplicate_recent",
+    name: "Duplicate Pixel",
+    allowed_pages: [],
+    enabled_modules: [
+      "duplicate_detection"
+    ],
+    active: true
+  )
+
+  first_session = pixel.pixel_sessions.create!(
+    session_id: "session_duplicate_first",
+    page_url: "https://example.com",
+    started_at: 2.days.ago
+  )
+
+  first_session.create_lead!(
+    external_id: "duplicate-original",
+    first_name: "Original",
+    last_name: "Lead",
+    email: "duplicate@example.com",
+    phone: "5559991111",
+    landing_page_url: "https://example.com",
+    submitted_at: 2.days.ago
+  )
+
+  second_session = pixel.pixel_sessions.create!(
+    session_id: "session_duplicate_second",
+    page_url: "https://example.com",
+    started_at: Time.current
+  )
+
+  lead = second_session.create_lead!(
+    external_id: "duplicate-new",
+    first_name: "New",
+    last_name: "Lead",
+    email: "duplicate@example.com",
+    phone: "5559991111",
+    landing_page_url: "https://example.com",
+    submitted_at: Time.current
+  )
+
+  VerificationRunner.new(lead).call
+
+  result =
+    lead.verification_runs
+        .last
+        .layer_results
+        .find_by!(
+          layer_name: "duplicate_detection"
+        )
+
+  assert_equal "fail", result.verdict
+
+  assert_equal(
+    "exact_duplicate",
+    result.raw_response["status"]
+  )
+ end
+
+ test "ignores duplicates older than thirty days" do
+  account = Account.create!(
+    external_id: "acct_duplicate_old",
+    company_name: "Old Duplicate Account",
+    plan: "growth",
+    monthly_credit_allowance: 100,
+    credits_used_this_cycle: 0,
+    status: "active",
+    enabled_modules: [
+      "duplicate_detection"
+    ]
+  )
+
+  pixel = account.pixels.create!(
+    public_id: "px_duplicate_old",
+    name: "Old Duplicate Pixel",
+    allowed_pages: [],
+    enabled_modules: [
+      "duplicate_detection"
+    ],
+    active: true
+  )
+
+  old_session = pixel.pixel_sessions.create!(
+    session_id: "session_duplicate_old",
+    page_url: "https://example.com",
+    started_at: 45.days.ago
+  )
+
+  old_session.create_lead!(
+    external_id: "duplicate-old-original",
+    first_name: "Old",
+    last_name: "Lead",
+    email: "oldduplicate@example.com",
+    phone: "5558882222",
+    landing_page_url: "https://example.com",
+    submitted_at: 45.days.ago
+  )
+
+  new_session = pixel.pixel_sessions.create!(
+    session_id: "session_duplicate_new",
+    page_url: "https://example.com",
+    started_at: Time.current
+  )
+
+  lead = new_session.create_lead!(
+    external_id: "duplicate-current",
+    first_name: "Current",
+    last_name: "Lead",
+    email: "oldduplicate@example.com",
+    phone: "5558882222",
+    landing_page_url: "https://example.com",
+    submitted_at: Time.current
+  )
+
+  VerificationRunner.new(lead).call
+
+  result =
+    lead.verification_runs
+        .last
+        .layer_results
+        .find_by!(
+          layer_name: "duplicate_detection"
+        )
+
+  assert_equal "pass", result.verdict
+
+  assert_equal(
+    "unique",
+    result.raw_response["status"]
+  )
+ end
+
+ test "does not treat a lead from another account as a duplicate" do
+  # Account A already has a lead with this phone/email.
+  first_account = Account.create!(
+    external_id: "acct_duplicate_tenant_a",
+    company_name: "Tenant A",
+    plan: "growth",
+    monthly_credit_allowance: 100,
+    credits_used_this_cycle: 0,
+    status: "active",
+    enabled_modules: [
+      "duplicate_detection"
+    ]
+  )
+
+  first_pixel = first_account.pixels.create!(
+    public_id: "px_duplicate_tenant_a",
+    name: "Tenant A Pixel",
+    allowed_pages: [],
+    enabled_modules: [
+      "duplicate_detection"
+    ],
+    active: true
+  )
+
+  first_session = first_pixel.pixel_sessions.create!(
+    session_id: "session_duplicate_tenant_a",
+    page_url: "https://tenant-a.example.com",
+    started_at: 1.day.ago
+  )
+
+  first_session.create_lead!(
+    external_id: "tenant-a-existing-lead",
+    first_name: "Existing",
+    last_name: "Lead",
+    email: "shared@example.com",
+    phone: "5557773333",
+    landing_page_url: "https://tenant-a.example.com",
+    submitted_at: 1.day.ago
+  )
+
+  # Account B receives an identical lead.
+  second_account = Account.create!(
+    external_id: "acct_duplicate_tenant_b",
+    company_name: "Tenant B",
+    plan: "growth",
+    monthly_credit_allowance: 100,
+    credits_used_this_cycle: 0,
+    status: "active",
+    enabled_modules: [
+      "duplicate_detection"
+    ]
+  )
+
+  second_pixel = second_account.pixels.create!(
+    public_id: "px_duplicate_tenant_b",
+    name: "Tenant B Pixel",
+    allowed_pages: [],
+    enabled_modules: [
+      "duplicate_detection"
+    ],
+    active: true
+  )
+
+  second_session = second_pixel.pixel_sessions.create!(
+    session_id: "session_duplicate_tenant_b",
+    page_url: "https://tenant-b.example.com",
+    started_at: Time.current
+  )
+
+  lead = second_session.create_lead!(
+    external_id: "tenant-b-new-lead",
+    first_name: "New",
+    last_name: "Lead",
+    email: "shared@example.com",
+    phone: "5557773333",
+    landing_page_url: "https://tenant-b.example.com",
+    submitted_at: Time.current
+  )
+
+  VerificationRunner.new(lead).call
+
+  result =
+    lead.verification_runs
+        .last
+        .layer_results
+        .find_by!(
+          layer_name: "duplicate_detection"
+        )
+
+  assert_equal "completed",
+               result.execution_status
+
+  assert_equal "pass",
+               result.verdict
+
+  assert_equal(
+    "unique",
+    result.raw_response["status"]
+  )
+end
 end

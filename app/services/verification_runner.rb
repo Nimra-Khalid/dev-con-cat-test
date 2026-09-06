@@ -256,34 +256,40 @@ end
   end
 
   def duplicate_status_for_lead
-    account_leads =
-      Lead
-        .joins(pixel_session: { pixel: :account })
-        .where(
-          pixels: {
-            account_id: lead.account.id
-          }
-        )
-        .where.not(id: lead.id)
+  duplicate_window_start = 30.days.ago
 
-    exact_duplicate =
-      account_leads.exists?(
-        phone: lead.phone,
-        email: lead.email
+  account_leads =
+    Lead
+      .joins(pixel_session: { pixel: :account })
+      .where(
+        pixels: {
+          account_id: lead.account.id
+        }
+      )
+      .where.not(id: lead.id)
+      .where(
+        "leads.submitted_at >= ?",
+        duplicate_window_start
       )
 
-    return "exact_duplicate" if exact_duplicate
+  exact_duplicate =
+    account_leads.exists?(
+      phone: lead.phone,
+      email: lead.email
+    )
 
-    soft_duplicate =
-      account_leads
-        .where(phone: lead.phone)
-        .where.not(email: lead.email)
-        .exists?
+  return "exact_duplicate" if exact_duplicate
 
-    return "soft_duplicate" if soft_duplicate
+  soft_duplicate =
+    account_leads
+      .where(phone: lead.phone)
+      .where.not(email: lead.email)
+      .exists?
 
-    "unique"
-  end
+  return "soft_duplicate" if soft_duplicate
+
+  "unique"
+end
 
   def provider_response(
     filename,
