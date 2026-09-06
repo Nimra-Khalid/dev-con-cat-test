@@ -79,34 +79,84 @@ class VerificationRunner
 
   attr_reader :lead
 
+  def voice_not_applicable?
+  filename = PROVIDER_FILES["voice"]
+
+  raw = provider_response(
+    filename,
+    lead.fixture_key.presence || lead.external_id
+  )
+
+  return false unless raw
+
+  normalized =
+    ProviderResultNormalizer
+      .new("voice", raw)
+      .call
+
+  normalized["applicable"] == false
+rescue StandardError
+  false
+end
+
+def create_not_applicable_result(
+  verification_run,
+  layer_name
+)
+  result =
+    verification_run.layer_results.create!(
+      layer_name: layer_name,
+      execution_status: "not_applicable",
+      verdict: nil,
+      risk_score: 0,
+      credit_cost: 0,
+      reason:
+        "This verification layer is not applicable to this lead.",
+      raw_response: {}
+    )
+
+  create_layer_activity(result)
+end
+
   def process_modules(verification_run)
-    credit_manager =
-      CreditManager.new(
-        lead.account,
-        verification_run
+  credit_manager =
+    CreditManager.new(
+      lead.account,
+      verification_run
+    )
+
+  enabled_modules.each do |layer_name|
+    if layer_name == "voice" &&
+       voice_not_applicable?
+
+      create_not_applicable_result(
+        verification_run,
+        layer_name
       )
 
-    enabled_modules.each do |layer_name|
-      unless credit_manager.charge!(layer_name)
-        create_insufficient_credit_result(
-          verification_run,
-          layer_name,
-          credit_manager.cost_for(layer_name)
-        )
+      next
+    end
 
-        next
-      end
+    unless credit_manager.charge!(layer_name)
+      create_insufficient_credit_result(
+        verification_run,
+        layer_name,
+        credit_manager.cost_for(layer_name)
+      )
 
-      if layer_name == "duplicate_detection"
-        process_duplicate_layer(verification_run)
-      else
-        process_provider_layer(
-          verification_run,
-          layer_name
-        )
-      end
+      next
+    end
+
+    if layer_name == "duplicate_detection"
+      process_duplicate_layer(verification_run)
+    else
+      process_provider_layer(
+        verification_run,
+        layer_name
+      )
     end
   end
+end
 
   def enabled_modules
     lead.pixel.enabled_modules
@@ -148,13 +198,7 @@ class VerificationRunner
         .new(layer_name, raw)
         .call
 
-    execution_status =
-      if layer_name == "voice" &&
-         normalized["applicable"] == false
-        "not_applicable"
-      else
-        "completed"
-      end
+    execution_status = "completed"
 
     result =
       verification_run.layer_results.create!(
