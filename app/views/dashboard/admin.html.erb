@@ -1,0 +1,364 @@
+<div class="crm-shell">
+  <aside class="crm-sidebar">
+    <div class="crm-brand">
+      <div class="brand-mark">SP</div>
+
+      <div>
+        <strong>Super Pixel</strong>
+        <span>Administration</span>
+      </div>
+    </div>
+
+    <nav class="crm-nav">
+      <a href="/admin" class="active">Accounts</a>
+      <a href="/crm">Leads</a>
+    </nav>
+
+    <div class="crm-user">
+      <strong><%= @current_user.name %></strong>
+      <span><%= @current_user.role.humanize %></span>
+      <span><%= @current_user.email %></span>
+    </div>
+  </aside>
+
+  <main class="crm-main">
+    <header class="crm-header">
+      <div>
+        <h1>Account Overview</h1>
+        <p>
+          Monitor account plans, verification usage and credit health.
+        </p>
+      </div>
+
+      <button
+        id="logout-button"
+        class="secondary-button"
+      >
+        Sign out
+      </button>
+    </header>
+
+    <section class="admin-summary-grid">
+      <div class="crm-panel summary-card">
+        <span>Total Accounts</span>
+        <strong id="total-accounts">—</strong>
+      </div>
+
+      <div class="crm-panel summary-card">
+        <span>Nearly Out</span>
+        <strong id="nearly-out-count">—</strong>
+      </div>
+
+      <div class="crm-panel summary-card">
+        <span>Total Credits Remaining</span>
+        <strong id="credits-remaining">—</strong>
+      </div>
+
+      <div class="crm-panel summary-card">
+        <span>Daily Burn</span>
+        <strong id="daily-burn">—</strong>
+      </div>
+    </section>
+
+    <section class="crm-panel admin-accounts-panel">
+      <div class="crm-panel-header">
+        <div>
+          <h2>Accounts</h2>
+          <span id="account-count">
+            Loading...
+          </span>
+        </div>
+      </div>
+
+      <div class="crm-table-wrap">
+        <table class="crm-table">
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th>Plan</th>
+              <th>Status</th>
+              <th>Credits</th>
+              <th>Burn / Day</th>
+              <th>Est. Days</th>
+              <th>Health</th>
+            </tr>
+          </thead>
+
+          <tbody id="accounts-body">
+            <tr>
+              <td colspan="7" class="crm-empty">
+                Loading accounts...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const accountsBody =
+    document.getElementById("accounts-body");
+
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = value ?? "";
+    return div.innerHTML;
+  }
+
+  function number(value) {
+    return new Intl.NumberFormat().format(
+      value || 0
+    );
+  }
+
+  function statusClass(status) {
+    if (status === "active") {
+      return "badge badge-success";
+    }
+
+    if (status === "past_due") {
+      return "badge badge-danger";
+    }
+
+    return "badge badge-muted";
+  }
+
+  function renderAccounts(accounts) {
+    document.getElementById(
+      "account-count"
+    ).textContent =
+      `${accounts.length} accounts`;
+
+    const nearlyOut =
+      accounts.filter(
+        account => account.nearly_out
+      ).length;
+
+    const creditsRemaining =
+      accounts.reduce(
+        (sum, account) =>
+          sum +
+          (account.credits?.remaining || 0),
+        0
+      );
+
+    const dailyBurn =
+      accounts.reduce(
+        (sum, account) =>
+          sum +
+          (account.avg_daily_burn || 0),
+        0
+      );
+
+    document.getElementById(
+      "total-accounts"
+    ).textContent =
+      number(accounts.length);
+
+    document.getElementById(
+      "nearly-out-count"
+    ).textContent =
+      number(nearlyOut);
+
+    document.getElementById(
+      "credits-remaining"
+    ).textContent =
+      number(creditsRemaining);
+
+    document.getElementById(
+      "daily-burn"
+    ).textContent =
+      number(dailyBurn);
+
+    if (!accounts.length) {
+      accountsBody.innerHTML = `
+        <tr>
+          <td colspan="7" class="crm-empty">
+            No accounts found.
+          </td>
+        </tr>
+      `;
+
+      return;
+    }
+
+    accountsBody.innerHTML =
+      accounts.map(account => {
+        const remaining =
+          account.credits?.remaining || 0;
+
+        const allowance =
+          account.credits?.monthly_allowance || 0;
+
+        const used =
+          account.credits?.used || 0;
+
+        const percent =
+          allowance > 0
+            ? Math.min(
+                100,
+                Math.round(
+                  (used / allowance) * 100
+                )
+              )
+            : 0;
+
+        return `
+          <tr>
+            <td>
+              <strong>
+                ${escapeHtml(
+                  account.company_name
+                )}
+              </strong>
+
+              <span class="cell-secondary">
+                ${escapeHtml(
+                  account.external_id
+                )}
+              </span>
+            </td>
+
+            <td>
+              ${escapeHtml(
+                account.plan
+              )}
+            </td>
+
+            <td>
+              <span class="${statusClass(
+                account.status
+              )}">
+                ${escapeHtml(
+                  account.status
+                    .replaceAll("_", " ")
+                    .toUpperCase()
+                )}
+              </span>
+            </td>
+
+            <td>
+              <div class="credit-cell">
+                <strong>
+                  ${number(remaining)}
+                  remaining
+                </strong>
+
+                <span>
+                  ${number(used)}
+                  /
+                  ${number(allowance)}
+                  used
+                </span>
+
+                <div class="credit-progress">
+                  <div
+                    class="credit-progress-fill"
+                    style="width:${percent}%"
+                  ></div>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              ${number(
+                account.avg_daily_burn
+              )}
+            </td>
+
+            <td>
+              ${
+                account
+                  .estimated_days_remaining !== null
+                  ? `${account.estimated_days_remaining} days`
+                  : "—"
+              }
+            </td>
+
+            <td>
+              ${
+                account.nearly_out
+                  ? `
+                    <span class="health-warning">
+                      ⚠ Nearly out
+                    </span>
+                  `
+                  : `
+                    <span class="health-good">
+                      Healthy
+                    </span>
+                  `
+              }
+            </td>
+          </tr>
+        `;
+      }).join("");
+  }
+
+  async function loadAccounts() {
+    try {
+      const response =
+        await fetch("/admin/accounts", {
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json"
+          }
+        });
+
+      if (response.status === 401) {
+        window.location.href =
+          "/login-page";
+        return;
+      }
+
+      if (response.status === 403) {
+        window.location.href =
+          "/crm";
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          "Unable to load accounts"
+        );
+      }
+
+      const data =
+        await response.json();
+
+      renderAccounts(
+        data.results || []
+      );
+    } catch (error) {
+      accountsBody.innerHTML = `
+        <tr>
+          <td colspan="7"
+              class="crm-empty crm-error">
+            ${escapeHtml(
+              error.message
+            )}
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  document
+    .getElementById("logout-button")
+    .addEventListener(
+      "click",
+      async function() {
+        await fetch("/logout", {
+          method: "DELETE",
+          credentials: "same-origin"
+        });
+
+        window.location.href =
+          "/login-page";
+      }
+    );
+
+  loadAccounts();
+</script>

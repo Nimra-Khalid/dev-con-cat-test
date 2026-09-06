@@ -88,7 +88,11 @@
         );
       }
 
-      window.location.href = "/crm";
+      if (data.user.role === "super_admin") {
+  window.location.href = "/admin";
+} else {
+  window.location.href = "/crm";
+}
     } catch (error) {
       errorBox.textContent = error.message;
     } finally {

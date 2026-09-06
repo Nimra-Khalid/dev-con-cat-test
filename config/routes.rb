@@ -42,5 +42,8 @@ Rails.application.routes.draw do
     patch "/pixels/:id", to: "pixels#update"
 
     get "/pixels-page", to: "dashboard#pixels"
+
+    get "/admin/accounts", to: "admin/accounts#index"
+    get "/admin", to: "dashboard#admin"
     end
 end

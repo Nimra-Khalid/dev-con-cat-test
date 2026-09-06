@@ -2,7 +2,9 @@ class DashboardController < ApplicationController
   before_action :require_browser_login!, except: [:login]
 
   def login
-    redirect_to "/crm" if current_user
+    if current_user
+  redirect_to current_user.super_admin? ? "/admin" : "/crm"
+end
   end
 
   def index
@@ -28,6 +30,14 @@ class DashboardController < ApplicationController
     redirect_to "/crm"
   end
   end
+
+  def admin
+  @current_user = current_user
+
+  unless current_user.super_admin?
+    redirect_to "/crm"
+  end
+end
 
   private
 
