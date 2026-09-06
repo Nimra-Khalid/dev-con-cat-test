@@ -100,6 +100,11 @@ class PixelsControllerTest < ActionDispatch::IntegrationTest
       pixel["public_id"]
     end
 
+    assert_equal(
+  @account.enabled_modules,
+  body["available_modules"]
+)
+
     assert_includes ids, @pixel.public_id
     refute_includes ids, @other_pixel.public_id
   end

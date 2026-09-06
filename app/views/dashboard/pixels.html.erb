@@ -217,6 +217,12 @@
   const pixelError =
     document.getElementById("pixel-error");
 
+    function csrfToken() {
+  return document
+    .querySelector('meta[name="csrf-token"]')
+    ?.getAttribute("content");
+}
+
   function escapeHtml(value) {
     const div = document.createElement("div");
     div.textContent = value ?? "";
@@ -261,7 +267,7 @@
       pixels = data.results || [];
 
       availableModules =
-        pixels[0]?.available_modules || [];
+        data.available_modules || [];
 
       renderPixels();
     } catch (error) {
@@ -544,7 +550,8 @@
               "application/json",
 
             Accept:
-              "application/json"
+              "application/json",
+               "X-CSRF-Token": csrfToken()
           },
           body: JSON.stringify(payload)
         });

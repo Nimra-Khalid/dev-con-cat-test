@@ -7,7 +7,8 @@ class PixelsController < ApplicationController
     pixels = accessible_pixels.order(created_at: :desc)
 
     render json: {
-      results: pixels.map { |pixel| serialize_pixel(pixel) }
+      results: pixels.map { |pixel| serialize_pixel(pixel) },
+      available_modules: current_user.account.enabled_modules
     }
   end
 
