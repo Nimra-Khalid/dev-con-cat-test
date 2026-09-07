@@ -158,8 +158,11 @@ end
 
   VerificationRunner.new(lead).call
 
-  get "/leads/#{lead.external_id}/activity",
-      as: :json
+ get "/leads/#{lead.external_id}/activity",
+    params: {
+      session_id: session.session_id
+    },
+    as: :json
 
   assert_response :success
 
@@ -225,8 +228,9 @@ end
 
   get "/leads/#{lead.external_id}/activity",
       params: {
-        after_id: first_event.id
-      },
+  session_id: session.session_id,
+  after_id: first_event.id
+},
       as: :json
 
   assert_response :success
@@ -341,5 +345,64 @@ end
     as: :json
 
   assert_response :created
+end
+test "activity endpoint rejects incorrect session" do
+  session =
+    @pixel.pixel_sessions.create!(
+      session_id: "activity-security-session",
+      page_url: "https://example.com/landing",
+      started_at: Time.current
+    )
+
+  lead =
+    session.create_lead!(
+      external_id: "activity-security-lead",
+      first_name: "Jane",
+      last_name: "Doe",
+      email: "security@example.com",
+      phone: "5559991111",
+      landing_page_url: session.page_url,
+      submitted_at: Time.current
+    )
+
+  get "/leads/#{lead.external_id}/activity",
+      params: {
+        session_id: "wrong-session-id"
+      },
+      as: :json
+
+  assert_response :not_found
+end
+test "activity endpoint does not expose lead from another session" do
+  first_session =
+    @pixel.pixel_sessions.create!(
+      session_id: "activity-first-session",
+      page_url: "https://example.com/landing",
+      started_at: Time.current
+    )
+
+  lead =
+    first_session.create_lead!(
+      external_id: "activity-private-lead",
+      email: "private@example.com",
+      phone: "5558881111",
+      landing_page_url: first_session.page_url,
+      submitted_at: Time.current
+    )
+
+  second_session =
+    @pixel.pixel_sessions.create!(
+      session_id: "activity-second-session",
+      page_url: "https://example.com/landing",
+      started_at: Time.current
+    )
+
+  get "/leads/#{lead.external_id}/activity",
+      params: {
+        session_id: second_session.session_id
+      },
+      as: :json
+
+  assert_response :not_found
 end
 end

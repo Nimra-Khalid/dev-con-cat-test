@@ -145,11 +145,20 @@ class IngestionController < ApplicationController
   end
 
   def activity
-  lead = Lead.find_by(
-    external_id: params[:lead_id]
+  session = PixelSession.find_by(
+    session_id: params[:session_id]
   )
 
-  unless lead
+  unless session
+    return render json: {
+      error: "Pixel session not found"
+    }, status: :not_found
+  end
+
+  lead = session.lead
+
+  unless lead &&
+      lead.external_id == params[:lead_id]
     return render json: {
       error: "Lead not found"
     }, status: :not_found
