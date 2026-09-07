@@ -1,85 +1,79 @@
 require "test_helper"
 
 class PixelsControllerTest < ActionDispatch::IntegrationTest
-  setup do
-    @account = Account.create!(
-      external_id: "acct_pixel_test",
-      company_name: "Pixel Test Co",
-      plan: "growth",
-      monthly_credit_allowance: 1000,
-      credits_used_this_cycle: 0,
-      status: "active",
-      enabled_modules: [
-        "anura",
-        "trustedform",
-        "dnc"
-      ]
-    )
+setup do
+  @account = Account.create!(
+    external_id: "acct_pixels_controller_primary_test",
+    company_name: "Pixel Controller Test Co",
+    plan: "growth",
+    monthly_credit_allowance: 1000,
+    credits_used_this_cycle: 0,
+    status: "active",
+    enabled_modules: [
+      "anura",
+      "trustedform",
+      "dnc"
+    ]
+  )
 
-    @other_account = Account.create!(
-      external_id: "acct_pixel_other",
-      company_name: "Other Co",
-      plan: "growth",
-      monthly_credit_allowance: 1000,
-      credits_used_this_cycle: 0,
-      status: "active",
-      enabled_modules: [
-        "anura",
-        "trustedform"
-      ]
-    )
+  @other_account = Account.create!(
+    external_id: "acct_pixels_controller_other_test",
+    company_name: "Pixel Controller Other Co",
+    plan: "growth",
+    monthly_credit_allowance: 1000,
+    credits_used_this_cycle: 0,
+    status: "active",
+    enabled_modules: [
+      "anura",
+      "trustedform"
+    ]
+  )
 
-    @admin = User.create!(
-      external_id: "usr_pixel_admin",
-      name: "Pixel Admin",
-      email: "pixel-admin@example.com",
-      role: "account_admin",
-      account: @account,
-      password: "password123",
-      password_confirmation: "password123"
-    )
+  @admin = User.create!(
+    external_id: "usr_pixels_controller_admin_test",
+    name: "Pixel Admin",
+    email: "pixels-controller-admin-test@example.com",
+    role: "account_admin",
+    account: @account,
+    password: "password123",
+    password_confirmation: "password123"
+  )
 
-    @member = User.create!(
-      external_id: "usr_pixel_member",
-      name: "Pixel Member",
-      email: "pixel-member@example.com",
-      role: "member",
-      account: @account,
-      password: "password123",
-      password_confirmation: "password123"
-    )
+  @member = User.create!(
+  external_id: "usr_pixels_controller_member_test",
+  name: "Pixel Member",
+  email: "pixels-controller-member-test@example.com",
+  role: "member",
+  account: @account,
+  password: "password123",
+  password_confirmation: "password123"
+)
 
-    @other_admin = User.create!(
-      external_id: "usr_pixel_other_admin",
-      name: "Other Admin",
-      email: "other-pixel-admin@example.com",
-      role: "account_admin",
-      account: @other_account,
-      password: "password123",
-      password_confirmation: "password123"
-    )
+@pixel = @account.pixels.create!(
+  public_id: "px_pixels_controller_primary_test",
+  name: "Primary Test Pixel",
+  allowed_pages: [
+    "https://example.com"
+  ],
+  enabled_modules: [
+    "anura",
+    "trustedform"
+  ],
+  active: true
+)
 
-    @pixel = @account.pixels.create!(
-      name: "Main Pixel",
-      allowed_pages: [
-        "http://localhost:3001"
-      ],
-      enabled_modules: [
-        "anura",
-        "trustedform"
-      ],
-      active: true
-    )
-
-    @other_pixel = @other_account.pixels.create!(
-      name: "Other Pixel",
-      allowed_pages: [],
-      enabled_modules: [
-        "anura"
-      ],
-      active: true
-    )
-  end
+@other_pixel = @other_account.pixels.create!(
+  public_id: "px_pixels_controller_other_test",
+  name: "Other Account Test Pixel",
+  allowed_pages: [
+    "https://other-example.com"
+  ],
+  enabled_modules: [
+    "anura"
+  ],
+  active: true
+)
+end
 
   test "authentication is required" do
     get "/pixels"

@@ -1,3 +1,4 @@
+require "uri"
 class IngestionController < ApplicationController
   skip_before_action :verify_authenticity_token
 
@@ -77,6 +78,12 @@ class IngestionController < ApplicationController
       return render json: {
         error: "Pixel session not found"
       }, status: :not_found
+    end
+
+    unless page_allowed?(pixel, session.page_url)
+      return render json: {
+       error: "Landing page is not allowed for this pixel"
+      }, status: :forbidden
     end
 
     lead =
@@ -199,13 +206,85 @@ end
     nil
   end
 
-  def page_allowed?(pixel, page_url)
-    return true if pixel.allowed_pages.blank?
+def page_allowed?(pixel, page_url)
+  return true if pixel.allowed_pages.blank?
+  return false if page_url.blank?
 
-    pixel.allowed_pages.any? do |allowed_page|
-      page_url.to_s.start_with?(
-        allowed_page.to_s
-      )
+  incoming_uri = parse_uri(page_url)
+  return false unless incoming_uri
+
+  pixel.allowed_pages.any? do |allowed_page|
+    allowed_uri = parse_uri(allowed_page)
+
+    next false unless allowed_uri
+
+    same_origin =
+      normalized_origin(allowed_uri) ==
+      normalized_origin(incoming_uri)
+
+    next false unless same_origin
+
+    allowed_path =
+      normalize_path(allowed_uri.path)
+
+    incoming_path =
+      normalize_path(incoming_uri.path)
+
+    # If only the site origin is configured,
+    # allow any path on that same origin.
+    if allowed_path == "/"
+      true
+    else
+      allowed_path == incoming_path
     end
   end
+end
+
+def parse_uri(url)
+  uri = URI.parse(url.to_s)
+
+  return nil unless %w[http https].include?(
+    uri.scheme&.downcase
+  )
+
+  return nil if uri.host.blank?
+
+  uri
+rescue URI::InvalidURIError
+  nil
+end
+
+def normalized_origin(uri)
+  "#{uri.scheme.downcase}://" \
+    "#{uri.host.downcase}" \
+    "#{normalized_port(uri)}"
+end
+
+def normalize_path(path)
+  normalized = path.presence || "/"
+
+  normalized = normalized.chomp("/")
+
+  normalized.presence || "/"
+end
+
+def normalized_port(uri)
+  default_port =
+    (uri.scheme.downcase == "https" &&
+      uri.port == 443) ||
+    (uri.scheme.downcase == "http" &&
+      uri.port == 80)
+
+  default_port ? "" : ":#{uri.port}"
+end
+
+def normalized_port(uri)
+  return "" unless uri.port
+
+  default_port =
+    (uri.scheme == "https" && uri.port == 443) ||
+    (uri.scheme == "http" && uri.port == 80)
+
+  default_port ? "" : ":#{uri.port}"
+end
 end

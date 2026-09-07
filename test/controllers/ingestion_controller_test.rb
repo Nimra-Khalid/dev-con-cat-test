@@ -246,4 +246,100 @@ end
       .dig("payload", "message")
   )
   end
+
+  test "visit rejects disallowed landing page" do
+  post "/visit",
+    params: {
+      pixel_id: @pixel.public_id,
+      session_id: "blocked-session",
+      page_url: "https://evil.example.com/form"
+    },
+    as: :json
+
+  assert_response :forbidden
+
+  body = JSON.parse(response.body)
+
+  assert_equal(
+    "Landing page is not allowed for this pixel",
+    body["error"]
+  )
+ end
+
+ test "visit allows configured page with query parameters" do
+  @pixel.update!(
+    allowed_pages: [
+      "https://example.com/form"
+    ]
+  )
+
+  post "/visit",
+    params: {
+      pixel_id: @pixel.public_id,
+      session_id: "query-session",
+      page_url:
+        "https://example.com/form?utm_source=google"
+    },
+    as: :json
+
+  assert_response :created
+ end
+
+ test "lead submission rechecks current landing page permission" do
+  @pixel.update!(
+    allowed_pages: [
+      "https://example.com/form"
+    ]
+  )
+
+  post "/visit",
+    params: {
+      pixel_id: @pixel.public_id,
+      session_id: "permission-change-session",
+      page_url: "https://example.com/form"
+    },
+    as: :json
+
+  assert_response :created
+
+  # Admin changes Pixel configuration after visit.
+  @pixel.update!(
+    allowed_pages: [
+      "https://example.com/other-form"
+    ]
+  )
+
+  post "/leads",
+    params: {
+      pixel_id: @pixel.public_id,
+      session_id: "permission-change-session",
+      lead_id: "permission-change-lead",
+      fields: {
+        first_name: "Test",
+        last_name: "Lead",
+        email: "test@example.com",
+        phone: "5551112222"
+      }
+    },
+    as: :json
+
+  assert_response :forbidden
+ end
+
+ test "empty allowed pages permits any landing page" do
+  @pixel.update!(
+    allowed_pages: []
+  )
+
+  post "/visit",
+    params: {
+      pixel_id: @pixel.public_id,
+      session_id: "open-session",
+      page_url:
+        "https://another-site.example/form"
+    },
+    as: :json
+
+  assert_response :created
+end
 end
