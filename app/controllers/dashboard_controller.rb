@@ -3,8 +3,8 @@ class DashboardController < ApplicationController
 
   def login
     if current_user
-  redirect_to current_user.super_admin? ? "/admin" : "/crm"
-end
+      redirect_to current_user.super_admin? ? "/admin" : "/crm"
+    end
   end
 
   def index
@@ -24,20 +24,20 @@ end
   end
 
   def pixels
-  @current_user = current_user
+    @current_user = current_user
 
-  unless current_user.account_admin? || current_user.super_admin?
-    redirect_to "/crm"
-  end
+    unless current_user.account_admin?
+      redirect_to current_user.super_admin? ? "/admin" : "/crm"
+    end
   end
 
   def admin
-  @current_user = current_user
+    @current_user = current_user
 
-  unless current_user.super_admin?
-    redirect_to "/crm"
+    unless current_user.super_admin?
+      redirect_to "/crm"
+    end
   end
-end
 
   private
 

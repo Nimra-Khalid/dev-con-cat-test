@@ -139,7 +139,7 @@ class CertificatesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal(
       "ACCEPT",
-      certificate.dig("evidence", "verdict", "decision")
+      certificate.dig("verdict", "decision")
     )
   end
 
@@ -169,7 +169,6 @@ class CertificatesControllerTest < ActionDispatch::IntegrationTest
       "REJECT",
       body.dig(
         "certificate",
-        "evidence",
         "verdict",
         "decision"
       )
@@ -213,4 +212,24 @@ class CertificatesControllerTest < ActionDispatch::IntegrationTest
     "Consent certificates cannot be deleted"
   )
   end
+
+  test "public certificate does not expose lead PII or raw provider responses" do
+  get "/certificates/#{@certificate.public_id}",
+      as: :json
+
+  assert_response :success
+
+  body = JSON.parse(response.body)
+
+  certificate = body["certificate"]
+
+  refute certificate.key?("evidence")
+
+  serialized = certificate.to_json
+
+  refute_includes serialized, @lead.email
+  refute_includes serialized, @lead.phone
+  refute_includes serialized, @lead.submit_ip.to_s
+  refute_includes serialized, "raw_response"
+end
 end
